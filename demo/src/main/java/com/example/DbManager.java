@@ -43,21 +43,33 @@ public class DbManager {
 			System.out.println(conn);
 			System.out.println("Connection to SQLite has been established.");
 			if (conn != null) {
-				String createTableSQL = "CREATE TABLE IF NOT EXISTS files (" + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-						+ "hash TEXT NOT NULL, " + "path TEXT NOT NULL UNIQUE" + ");";
-				conn.createStatement().execute(createTableSQL);
-
-				// create table if not exist "tags", linked to the id in "files"
+				// create if not exist tags, PK id, not null string tag
 				String createTagsTableSQL = "CREATE TABLE IF NOT EXISTS tags ("
-						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "main_tag TEXT NOT NULL UNIQUE," + "sub_tag TEXT"
-						+ ");";
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag TEXT NOT NULL UNIQUE);";
 				conn.createStatement().execute(createTagsTableSQL);
-
-				String createItemTagsTableSQL = "CREATE TABLE IF NOT EXISTS item_tags ("
+				// file pk id hash path
+				String createFilesTableSQL = "CREATE TABLE IF NOT EXISTS files ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "hash TEXT NOT NULL, "
+						+ "path TEXT NOT NULL UNIQUE);";
+				conn.createStatement().execute(createFilesTableSQL);
+				// file tags ikd file_id tag_id
+				String createFileTagsTableSQL = "CREATE TABLE IF NOT EXISTS file_tags ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "file_id INTEGER NOT NULL, "
 						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id), "
-						+ "FOREIGN KEY (tag_id) REFERENCES tags(id)" + ");";
-				conn.createStatement().execute(createItemTagsTableSQL);
+						+ "FOREIGN KEY (tag_id) REFERENCES tags(id));";
+				conn.createStatement().execute(createFileTagsTableSQL);
+				// tag connections id fk parent_tag_id, child_tag_id
+				String createTagConnectionsTableSQL = "CREATE TABLE IF NOT EXISTS tag_connections ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "parent_tag_id INTEGER NOT NULL, "
+						+ "child_tag_id INTEGER NOT NULL, " + "FOREIGN KEY (parent_tag_id) REFERENCES tags(id), "
+						+ "FOREIGN KEY (child_tag_id) REFERENCES tags(id));";
+				conn.createStatement().execute(createTagConnectionsTableSQL);
+				// tag_aliases id, fk tag_id, alias
+				String createTagAliasesTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
+						+ "alias TEXT NOT NULL UNIQUE, " + "FOREIGN KEY (tag_id) REFERENCES tags(id));";
+				conn.createStatement().execute(createTagAliasesTableSQL);
+				System.out.println("Database and tables created successfully.");
 			}
 
 		} catch (Exception e) {
@@ -225,4 +237,95 @@ public class DbManager {
 		return fileItems;
 	}
 
+	public static List<FileItem> findFiles(List<String> tags) {
+		List<FileItem> files = new ArrayList<>();
+		try {
+			StringBuilder query = new StringBuilder(
+					"SELECT f.* FROM files f INNER JOIN file_tags ft ON f.id = ft.file_id INNER JOIN tags t ON ft.tag_id = t.id WHERE t.tag IN (");
+			for (int i = 0; i < tags.size(); i++) {
+				query.append("?");
+				if (i < tags.size() - 1) {
+					query.append(", ");
+				}
+			}
+			query.append(");");
+			PreparedStatement stmt = conn.prepareStatement(query.toString());
+			for (int i = 0; i < tags.size(); i++) {
+				stmt.setString(i + 1, tags.get(i));
+			}
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				File file = new File(rs.getString("path"));
+				String path = rs.getString("path");
+				String name = file.getName();
+				int id = rs.getInt("id");
+				files.add(new FileItem(file, path, name, id));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return files;
+	}
+
+	public static boolean doesTagExist(String text) {
+		try {
+			String selectSQL = "SELECT COUNT(*) FROM tags WHERE tag = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, text);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				return rs.getInt(1) > 0;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	public static int createTag(String tag) {
+		try {
+			String insertSubTagSQL = "INSERT INTO tags (tag) VALUES (?);";
+			PreparedStatement stmt = conn.prepareStatement(insertSubTagSQL);
+			stmt.setString(1, tag);
+			stmt.executeUpdate();
+		} catch (SQLException ex) {
+		}
+		if (doesTagExist(tag))
+			return 1;
+		else
+			return 0;
+	}
+
+	public static int createTagAlias(String tag, String alias) {
+		try {
+			String insertSubTagSQL = "INSERT INTO tag_aliases (tag_id, alias) VALUES ((SELECT id FROM tags WHERE tag = ?), ?);";
+			PreparedStatement stmt = conn.prepareStatement(insertSubTagSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, alias);
+			stmt.executeUpdate();
+		} catch (SQLException ex) {
+			System.out.println("Error creating tag alias: " + ex.getMessage());
+			return 0;
+		}
+		return 1;
+	}
+
+	public static List<String> findTags(String search) {
+		// select tags.tag from tags t left join tag_aliases ta on t.id = ta.tag_id
+		// where t.tag like ? or ta.alias like ?;
+		List<String> tags = new ArrayList<>();
+		try {
+			String selectSQL = "SELECT t.tag, t.id FROM tags t LEFT JOIN tag_aliases ta ON t.id = ta.tag_id WHERE t.tag LIKE ? OR ta.alias LIKE ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, "%" + search + "%");
+			stmt.setString(2, "%" + search + "%");
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				tags.add(rs.getString("tag"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tags;
+	}
 }

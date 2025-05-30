@@ -12,7 +12,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
@@ -38,16 +38,24 @@ public class FilePanel extends JPanel {
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
 		}
 
-		JButton tagsButton = new JButton("Tags");
-		tagsButton.addActionListener(e -> {
-			// openTagGUI(fileItem.id);
-
+		JCheckBox checkBox = new JCheckBox();
+		checkBox.addActionListener(e -> {
+			if (checkBox.isSelected()) {
+				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, Color.GREEN));
+			} else {
+				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+			}
 		});
+		// JButton tagsButton = new JButton("Tags");
+		// tagsButton.addActionListener(e -> {
+		// openTagGUI(fileItem.id);
+
+		// });
 
 		JPanel namePanel = new JPanel();
 		namePanel.setLayout(new BorderLayout());
 		namePanel.add(nameLabel, BorderLayout.CENTER);
-		namePanel.add(tagsButton, BorderLayout.EAST);
+		namePanel.add(checkBox, BorderLayout.EAST);
 		add(imgLabel, BorderLayout.CENTER);
 		add(namePanel, BorderLayout.SOUTH);
 
