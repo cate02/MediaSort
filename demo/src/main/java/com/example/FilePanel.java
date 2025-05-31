@@ -42,15 +42,12 @@ public class FilePanel extends JPanel {
 		checkBox.addActionListener(e -> {
 			if (checkBox.isSelected()) {
 				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, Color.GREEN));
+				GUI.changeSelectedFiles(fileItem, 1);
 			} else {
 				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+				GUI.changeSelectedFiles(fileItem, -1);
 			}
 		});
-		// JButton tagsButton = new JButton("Tags");
-		// tagsButton.addActionListener(e -> {
-		// openTagGUI(fileItem.id);
-
-		// });
 
 		JPanel namePanel = new JPanel();
 		namePanel.setLayout(new BorderLayout());

@@ -26,18 +26,22 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 public class GUI {
+	static List<FileItem> selectedFileItems = new ArrayList<>();
+
 	static Color black = new Color(0, 0, 0);
 	static Color gray = new Color(128, 128, 128);
 
-	private JFrame frame = new JFrame();
-	// private JPanel interfacePanel = new JPanel(); // search, listings
-	private JPanel listingPanel = new JPanel(); // listings
-	private JPanel tagsPanel = new JPanel();
+	static JFrame frame = new JFrame();
+	JPanel interfacePanel = new JPanel(); // search, listings
+	JPanel listingPanel = new JPanel(); // listings
+	JPanel tagsPanel = new JPanel();
 
-	private JList<String> searchedTagsList = new JList<>();
-	private JList<String> appliedTagsList = new JList<>();
-	private JList<String> fileTagsList = new JList<>();
-	private JTextField tagSearchField = new JTextField();
+	JList<String> searchedTagsList = new JList<>();
+	JList<String> appliedTagsList = new JList<>();
+	static JList<String> fileTagsList = new JList<>();
+	JTextField tagSearchField = new JTextField();
+
+	static JTabbedPane tabbedPane = new JTabbedPane();
 
 	GUI() {
 		updateSearchTags();
@@ -58,17 +62,11 @@ public class GUI {
 	void setUpGUI() {
 		System.out.println("Setting up GUI");
 
-		frame.pack();
-		// frame.add(panel);
 		frame.setVisible(true);
 		frame.setTitle("MediaSort");
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setTitle("MediaSort");
-		frame.pack();
-		frame.setLocationRelativeTo(null);
-		frame.setVisible(true);
 		frame.add(listingPanel, BorderLayout.CENTER);
 		frame.add(tagsPanel, BorderLayout.WEST);
 
@@ -84,15 +82,14 @@ public class GUI {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-					System.out.println("Double clicked on tag: " + searchedTagsList.getSelectedValue());
-					// append to applied tags list
-					// Get current applied tags as a List
-					List<String> temp = new ArrayList<>();
-					for (int i = 0; i < appliedTagsList.getModel().getSize(); i++) {
-						temp.add(appliedTagsList.getModel().getElementAt(i));
+					if (tabbedPane.getSelectedIndex() == 0) {
+						changeJList(appliedTagsList, searchedTagsList.getSelectedValue(), 1);
+						changeSelectedFiles(null, -1);
+					} else {
+						DbManager.addTagToFiles(selectedFileItems, searchedTagsList.getSelectedValue());
+						updateFileTags();
+						// add tag to selected files
 					}
-					temp.add(searchedTagsList.getSelectedValue());
-					appliedTagsList.setListData(temp.toArray(new String[0]));
 					updateResults();
 				}
 			}
@@ -118,17 +115,32 @@ public class GUI {
 		JScrollPane appliedTagsPane = new JScrollPane();
 		appliedTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		appliedTagsPane.setViewportView(appliedTagsList);
+		appliedTagsList.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() >= 2) {
+					changeJList(appliedTagsList, appliedTagsList.getSelectedValue(), -1);
+					updateResults();
+				}
+			}
+		});
 
 		// file tags //
 		JScrollPane fileTagsPane = new JScrollPane();
 		fileTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		fileTagsPane.setViewportView(fileTagsList);
+		fileTagsList.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() >= 2) {
+					changeJList(fileTagsList, fileTagsList.getSelectedValue(), -1);
+				}
+			}
+		});
 
 		// jtabbedpane holding apply and file panes
-		JTabbedPane tabbedPane = new JTabbedPane();
 		tabbedPane.addTab("Applied Tags", appliedTagsPane);
 		tabbedPane.addTab("File Tags", fileTagsPane);
-		// tabbedPane.setPreferredSize(new Dimension(300, 300));
 
 		// control//
 		JPanel controlPanel = new JPanel();
@@ -143,7 +155,12 @@ public class GUI {
 		});
 		JButton deleteTagButton = new JButton("Delete tag");
 		deleteTagButton.addActionListener(e -> {
-			// DbManager.DeleteTag(existingTagsTagMap.get(existingTagsList.getSelectedValue());
+			// confirm dialog
+			int response = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete this tag?",
+					"Confirm Delete tag " + searchedTagsList.getSelectedValue(), JOptionPane.YES_NO_OPTION);
+			if (response == JOptionPane.YES_OPTION) {
+				DbManager.DeleteTag(searchedTagsList.getSelectedValue());
+			}
 		});
 		controlPanel.add(createTagButton);
 		controlPanel.add(editTagButton);
@@ -186,15 +203,61 @@ public class GUI {
 		// fsd -> xx
 	}
 
+	private static void updateFileTags() {
+		// find all tags that all selected files use
+		// add tags to file tags list
+
+		// when search tag clicked
+		// add tag to all selected files
+		// update file tags
+
+		// when file tag clicked
+		// remove tag from all
+		// update tags and results
+
+		List<String> foundTags = new ArrayList<>();
+		List<String> tags = new ArrayList<>();
+		foundTags = DbManager.findTags(selectedFileItems);
+		fileTagsList.setListData(foundTags.toArray(new String[0]));
+	}
+
 	private void updateResults() {
+		List<FileItem> fileItems;
 		List<String> tags = new ArrayList<>();
 		for (int i = 0; i < appliedTagsList.getModel().getSize(); i++) {
 			tags.add(appliedTagsList.getModel().getElementAt(i));
 		}
-		List<FileItem> fileItems = DbManager.findFiles(tags);
+
+		if (appliedTagsList.getModel().getSize() == 0) {
+			// new string with "*"
+			// List<String> emptyTags = new ArrayList<>();
+			// emptyTags.add("*");
+			// fileItems = DbManager.findFiles(emptyTags);
+			fileItems = DbManager.getFileItems();
+		} else
+			fileItems = DbManager.findFiles(tags);
 		// empty listingpanel
+
+		// clear selected file itmes
+
+		// for all selected file items
+		// if selectedfile[fileitem].id==fileItem.id
+		//
+
+		// for all fileitems
+		// for all selectedfiles
+		// if selectedfile.id=fileitem.id
+		// temp fileitem=fileitem and .selected=selectedfile.selected
+		List<FileItem> oldSelectedFileItems = new ArrayList<>(selectedFileItems);
+		selectedFileItems.clear();
 		listingPanel.removeAll();
 		for (FileItem fileItem : fileItems) {
+			for (FileItem selectedFileItem : oldSelectedFileItems) {
+				if (selectedFileItem.id == fileItem.id) {
+					fileItem.isSelected = selectedFileItem.isSelected;
+					break;
+				}
+			}
 			try {
 				listingPanel.add(new FilePanel(fileItem));
 			} catch (IOException e) {
@@ -202,6 +265,52 @@ public class GUI {
 			}
 		}
 		frame.pack();
+	}
+
+	private void changeJList(JList<String> list, String tag, int action) {
+		List<String> temp = new ArrayList<>();
+		for (int i = 0; i < list.getModel().getSize(); i++) {
+			temp.add(list.getModel().getElementAt(i));
+		}
+		if (action == 1) {
+			temp.add(tag);
+		} else if (action == -1) {
+			temp.remove(tag);
+		}
+		list.setListData(temp.toArray(new String[0]));
+	}
+
+	public static void changeSelectedFiles(FileItem fileItem, int action) {
+		if (selectedFileItems.isEmpty()) {
+			if (action == 1) {
+				tabbedPane.setSelectedIndex(1);
+			}
+		}
+
+		if (fileItem != null) {
+			if (action == 1) {
+				selectedFileItems.add(fileItem);
+			} else if (action == -1) {
+				selectedFileItems.remove(fileItem);
+			}
+		} else {
+			if (action == -1) {
+				selectedFileItems.clear();
+			}
+		}
+
+		if (selectedFileItems.size() <= 0) {
+			tabbedPane.setEnabledAt(1, false);
+			// focus/select applied tags tabv
+			tabbedPane.setSelectedIndex(0);
+		} else {
+			tabbedPane.setEnabledAt(1, true);
+			updateFileTags();
+		}
+
+		frame.pack();
+
+		System.out.println("Selected items: " + selectedFileItems.size() + " " + tabbedPane.getSelectedIndex());
 	}
 
 	static void createTagGUI() {
@@ -255,7 +364,7 @@ public class GUI {
 		JLabel existingSubTagsLabel = new JLabel("Existing aliases:");
 
 		contentPanel.add(existingSubTagsLabel);
-		contentPanel.add(scrollPane);
+		// contentPanel.add(scrollPane);
 
 		// when double clicked, remove from list
 		existingAliasesList.addMouseListener(new MouseAdapter() {

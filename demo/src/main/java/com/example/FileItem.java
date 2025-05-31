@@ -8,12 +8,14 @@ public class FileItem {
 	public final String path;
 	public final String name;
 	public final int id;
+	public boolean isSelected;
 
-	public FileItem(File file, String path, String name, int id) throws IOException {
+	public FileItem(File file, String path, String name, int id, boolean isSelected) throws IOException {
 		this.file = file;
 		this.path = path;
 		this.name = name;
 		this.id = id;
+		this.isSelected = isSelected;
 		FilePanel filePanel = new FilePanel(this);
 	}
 }

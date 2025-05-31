@@ -226,7 +226,7 @@ public class DbManager {
 				String name = file.getName();
 				int id = rs.getInt("id");
 				try {
-					fileItems.add(new FileItem(file, path, name, id));
+					fileItems.add(new FileItem(file, path, name, id, false));
 				} catch (IOException ex) {
 				}
 				i++;
@@ -241,7 +241,7 @@ public class DbManager {
 		List<FileItem> files = new ArrayList<>();
 		try {
 			StringBuilder query = new StringBuilder(
-					"SELECT f.* FROM files f INNER JOIN file_tags ft ON f.id = ft.file_id INNER JOIN tags t ON ft.tag_id = t.id WHERE t.tag IN (");
+					"SELECT DISTINCT f.* FROM files f INNER JOIN file_tags ft ON f.id = ft.file_id INNER JOIN tags t ON ft.tag_id = t.id WHERE t.tag IN (");
 			for (int i = 0; i < tags.size(); i++) {
 				query.append("?");
 				if (i < tags.size() - 1) {
@@ -259,12 +259,52 @@ public class DbManager {
 				String path = rs.getString("path");
 				String name = file.getName();
 				int id = rs.getInt("id");
-				files.add(new FileItem(file, path, name, id));
+				files.add(new FileItem(file, path, name, id, false));
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return files;
+	}
+
+	public static List<String> findTags(List<FileItem> files) {
+		List<String> tags = new ArrayList<>();
+		try {
+			StringBuilder query = new StringBuilder(
+					"SELECT DISTINCT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id WHERE ft.file_id IN (");
+			for (int i = 0; i < files.size(); i++) {
+				query.append("?");
+				if (i < files.size() - 1) {
+					query.append(", ");
+				}
+			}
+			query.append(");");
+			PreparedStatement stmt = conn.prepareStatement(query.toString());
+			for (int i = 0; i < files.size(); i++) {
+				stmt.setInt(i + 1, files.get(i).id);
+			}
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				tags.add(rs.getString("tag"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tags;
+	}
+
+	public static void addTagToFiles(List<FileItem> files, String tag) {
+		try {
+			String insertSQL = "INSERT INTO file_tags (file_id, tag_id) VALUES (?, (SELECT id FROM tags WHERE tag = ?));";
+			PreparedStatement stmt = conn.prepareStatement(insertSQL);
+			for (FileItem file : files) {
+				stmt.setInt(1, file.id);
+				stmt.setString(2, tag);
+				stmt.executeUpdate();
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static boolean doesTagExist(String text) {
@@ -328,4 +368,16 @@ public class DbManager {
 		}
 		return tags;
 	}
+
+	public static void DeleteTag(String tag) {
+		try {
+			String deleteSQL = "DELETE FROM tags WHERE tag = ?;";
+			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
+			stmt.setString(1, tag);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 }
