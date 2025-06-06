@@ -40,6 +40,8 @@ public class DbManager {
 		try {
 			String tempConnDir = "jdbc:sqlite:" + dbPath + "\\db.db";
 			conn = DriverManager.getConnection(tempConnDir);
+			conn.createStatement().execute("PRAGMA foreign_keys = ON;");
+
 			System.out.println(conn);
 			System.out.println("Connection to SQLite has been established.");
 			if (conn != null) {
@@ -55,19 +57,21 @@ public class DbManager {
 				// file tags ikd file_id tag_id
 				String createFileTagsTableSQL = "CREATE TABLE IF NOT EXISTS file_tags ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "file_id INTEGER NOT NULL, "
-						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id), "
-						+ "FOREIGN KEY (tag_id) REFERENCES tags(id));";
+						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE, "
+						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createFileTagsTableSQL);
 				// tag connections id fk parent_tag_id, child_tag_id
 				String createTagConnectionsTableSQL = "CREATE TABLE IF NOT EXISTS tag_connections ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "parent_tag_id INTEGER NOT NULL, "
-						+ "child_tag_id INTEGER NOT NULL, " + "FOREIGN KEY (parent_tag_id) REFERENCES tags(id), "
-						+ "FOREIGN KEY (child_tag_id) REFERENCES tags(id));";
+						+ "child_tag_id INTEGER NOT NULL, "
+						+ "FOREIGN KEY (parent_tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
+						+ "FOREIGN KEY (child_tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createTagConnectionsTableSQL);
 				// tag_aliases id, fk tag_id, alias
 				String createTagAliasesTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
-						+ "alias TEXT NOT NULL UNIQUE, " + "FOREIGN KEY (tag_id) REFERENCES tags(id));";
+						+ "alias TEXT NOT NULL UNIQUE, "
+						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createTagAliasesTableSQL);
 				System.out.println("Database and tables created successfully.");
 			}
@@ -248,11 +252,12 @@ public class DbManager {
 					query.append(", ");
 				}
 			}
-			query.append(");");
+			query.append(") GROUP BY f.id HAVING COUNT(DISTINCT t.tag) = ?;");
 			PreparedStatement stmt = conn.prepareStatement(query.toString());
 			for (int i = 0; i < tags.size(); i++) {
 				stmt.setString(i + 1, tags.get(i));
 			}
+			stmt.setInt(tags.size() + 1, tags.size());
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				File file = new File(rs.getString("path"));
@@ -278,11 +283,12 @@ public class DbManager {
 					query.append(", ");
 				}
 			}
-			query.append(");");
+			query.append(") GROUP BY t.id HAVING COUNT(DISTINCT ft.file_id) = ?;");
 			PreparedStatement stmt = conn.prepareStatement(query.toString());
 			for (int i = 0; i < files.size(); i++) {
 				stmt.setInt(i + 1, files.get(i).id);
 			}
+			stmt.setInt(files.size() + 1, files.size());
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				tags.add(rs.getString("tag"));
@@ -380,4 +386,17 @@ public class DbManager {
 		}
 	}
 
+	public static void DeleteTagFromFiles(String tag, List<FileItem> files) {
+		try {
+			String deleteSQL = "DELETE FROM file_tags WHERE file_id = ? AND tag_id = (SELECT id FROM tags WHERE tag = ?);";
+			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
+			for (FileItem file : files) {
+				stmt.setInt(1, file.id);
+				stmt.setString(2, tag);
+				stmt.executeUpdate();
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 }

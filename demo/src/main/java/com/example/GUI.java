@@ -56,7 +56,7 @@ public class GUI {
 			} catch (IOException ex) {
 			}
 		}
-		frame.pack();
+		CleanFrame(frame);
 	}
 
 	void setUpGUI() {
@@ -133,7 +133,9 @@ public class GUI {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-					changeJList(fileTagsList, fileTagsList.getSelectedValue(), -1);
+					DbManager.DeleteTagFromFiles(fileTagsList.getSelectedValue(), selectedFileItems);
+					updateFileTags();
+					updateResults();
 				}
 			}
 		});
@@ -156,7 +158,8 @@ public class GUI {
 		JButton deleteTagButton = new JButton("Delete tag");
 		deleteTagButton.addActionListener(e -> {
 			// confirm dialog
-			int response = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete this tag?",
+			int response = JOptionPane.showConfirmDialog(frame,
+					"Are you sure you want to delete tag: " + searchedTagsList.getSelectedValue() + "?",
 					"Confirm Delete tag " + searchedTagsList.getSelectedValue(), JOptionPane.YES_NO_OPTION);
 			if (response == JOptionPane.YES_OPTION) {
 				DbManager.DeleteTag(searchedTagsList.getSelectedValue());
@@ -199,7 +202,7 @@ public class GUI {
 			System.out.println("No tag found for search: " + search);
 		}
 		searchedTagsList.setListData(foundTags.toArray(new String[0]));
-		frame.pack();
+		CleanFrame(frame);
 		// fsd -> xx
 	}
 
@@ -228,26 +231,11 @@ public class GUI {
 			tags.add(appliedTagsList.getModel().getElementAt(i));
 		}
 
-		if (appliedTagsList.getModel().getSize() == 0) {
-			// new string with "*"
-			// List<String> emptyTags = new ArrayList<>();
-			// emptyTags.add("*");
-			// fileItems = DbManager.findFiles(emptyTags);
+		if (appliedTagsList.getModel().getSize() == 0)
 			fileItems = DbManager.getFileItems();
-		} else
+		else
 			fileItems = DbManager.findFiles(tags);
-		// empty listingpanel
 
-		// clear selected file itmes
-
-		// for all selected file items
-		// if selectedfile[fileitem].id==fileItem.id
-		//
-
-		// for all fileitems
-		// for all selectedfiles
-		// if selectedfile.id=fileitem.id
-		// temp fileitem=fileitem and .selected=selectedfile.selected
 		List<FileItem> oldSelectedFileItems = new ArrayList<>(selectedFileItems);
 		selectedFileItems.clear();
 		listingPanel.removeAll();
@@ -264,7 +252,8 @@ public class GUI {
 				e.printStackTrace();
 			}
 		}
-		frame.pack();
+		System.out.println("Updated results with " + fileItems.size() + " items");
+		CleanFrame(frame);
 	}
 
 	private void changeJList(JList<String> list, String tag, int action) {
@@ -308,7 +297,7 @@ public class GUI {
 			updateFileTags();
 		}
 
-		frame.pack();
+		CleanFrame(frame);
 
 		System.out.println("Selected items: " + selectedFileItems.size() + " " + tabbedPane.getSelectedIndex());
 	}
@@ -419,9 +408,17 @@ public class GUI {
 
 		createTagPanel.add(contentPanel, BorderLayout.CENTER);
 		frame.add(createTagPanel);
-		frame.pack();
+		CleanFrame(frame);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 		frame.requestFocus();
+	}
+
+	static void CleanFrame(JFrame frame) {
+		// frame.getContentPane().removeAll();
+		frame.pack();
+		frame.repaint();
+		frame.revalidate();
+		// System.out.println("Cleaned frame");
 	}
 }
