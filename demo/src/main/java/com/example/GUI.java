@@ -8,7 +8,6 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,12 +48,9 @@ public class GUI {
 
 		List<FileItem> fileItems = DbManager.getFileItems();
 		for (FileItem fileItem : fileItems) {
-			try {
-				FilePanel filePanel = new FilePanel(fileItem);
-				listingPanel.add(filePanel);
-				System.out.println("Added file panel for " + fileItem.name);
-			} catch (IOException ex) {
-			}
+			FilePanel filePanel = new FilePanel(fileItem);
+			listingPanel.add(filePanel);
+			System.out.println("Added file panel for " + fileItem.name);
 		}
 		CleanFrame(frame);
 	}
@@ -246,11 +242,7 @@ public class GUI {
 					break;
 				}
 			}
-			try {
-				listingPanel.add(new FilePanel(fileItem));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			listingPanel.add(new FilePanel(fileItem));
 		}
 		System.out.println("Updated results with " + fileItems.size() + " items");
 		CleanFrame(frame);

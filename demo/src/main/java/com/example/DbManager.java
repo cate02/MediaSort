@@ -229,13 +229,13 @@ public class DbManager {
 				String path = rs.getString("path");
 				String name = file.getName();
 				int id = rs.getInt("id");
-				try {
-					fileItems.add(new FileItem(file, path, name, id, false));
-				} catch (IOException ex) {
-				}
+				fileItems.add(new FileItem(file, path, name, id, false));
+				List<FileItem> findTagsList = new ArrayList<>();
+				findTagsList.add(fileItems.get(i));
+				fileItems.get(i).addTagsList(findTags(findTagsList));
 				i++;
 			}
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return fileItems;

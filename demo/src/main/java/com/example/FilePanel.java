@@ -1,6 +1,7 @@
 package com.example;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Image;
@@ -22,18 +23,33 @@ import javax.swing.UIManager;
 public class FilePanel extends JPanel {
 	private FileItem fileItem;
 	private Color gray = new Color(128, 128, 128);
+	private CardLayout cardLayout = new CardLayout();
+	private JPanel cards = new JPanel(cardLayout);
 
-	public FilePanel(FileItem fileItem) throws IOException {
+	public FilePanel(FileItem fileItem) {
 		this.fileItem = fileItem;
 		setLayout(new BorderLayout());
 		setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+
+		JPanel imageView = createImageView();
+		JPanel detailView = createDetailView();
+		cards.add(imageView, "image");
+		cards.add(detailView, "detail");
+		showImageView();
+	}
+
+	private JPanel createImageView() {
+		JPanel panel = new JPanel();
 		JLabel nameLabel = new JLabel(fileItem.name);
 		JLabel imgLabel = new JLabel();
 
 		if (isImageFile(fileItem.file)) {
-			Image image = ImageIO.read(fileItem.file);
-			Image scaledImage = image.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-			imgLabel.setIcon(new ImageIcon(scaledImage));
+			try {
+				Image image = ImageIO.read(fileItem.file);
+				Image scaledImage = image.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+				imgLabel.setIcon(new ImageIcon(scaledImage));
+			} catch (IOException ex) {
+			}
 		} else {
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
 		}
@@ -53,8 +69,8 @@ public class FilePanel extends JPanel {
 		namePanel.setLayout(new BorderLayout());
 		namePanel.add(nameLabel, BorderLayout.CENTER);
 		namePanel.add(checkBox, BorderLayout.EAST);
-		add(imgLabel, BorderLayout.CENTER);
-		add(namePanel, BorderLayout.SOUTH);
+		panel.add(imgLabel, BorderLayout.CENTER);
+		panel.add(namePanel, BorderLayout.SOUTH);
 
 		// fix not registering when mouse moves a pixel
 		addMouseListener(new MouseAdapter() {
@@ -69,6 +85,14 @@ public class FilePanel extends JPanel {
 				}
 			}
 		});
+
+		return panel;
+	}
+
+	private JPanel createDetailView() {
+		JPanel panel = new JPanel();
+
+		return panel;
 	}
 
 	static boolean isImageFile(File file) {
@@ -79,5 +103,13 @@ public class FilePanel extends JPanel {
 			}
 		}
 		return false;
+	}
+
+	public void showImageView() {
+		cardLayout.show(cards, "image");
+	}
+
+	public void showDetailView() {
+		cardLayout.show(cards, "detail");
 	}
 }
