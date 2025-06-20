@@ -229,10 +229,9 @@ public class DbManager {
 				String path = rs.getString("path");
 				String name = file.getName();
 				int id = rs.getInt("id");
-				fileItems.add(new FileItem(file, path, name, id, false));
-				List<FileItem> findTagsList = new ArrayList<>();
-				findTagsList.add(fileItems.get(i));
-				fileItems.get(i).addTagsList(findTags(findTagsList));
+				FileItem temp = new FileItem(file, path, name, id, false);
+				temp.addTagsList(findTags(temp));
+				fileItems.add(temp);
 				i++;
 			}
 		} catch (Exception e) {
@@ -264,12 +263,21 @@ public class DbManager {
 				String path = rs.getString("path");
 				String name = file.getName();
 				int id = rs.getInt("id");
-				files.add(new FileItem(file, path, name, id, false));
+				FileItem temp = new FileItem(file, path, name, id, false);
+				temp.addTagsList(findTags(temp));
+				files.add(temp);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return files;
+	}
+
+	public static List<String> findTags(FileItem file) {
+
+		List<FileItem> files = new ArrayList<>();
+		files.add(file);
+		return findTags(files);
 	}
 
 	public static List<String> findTags(List<FileItem> files) {

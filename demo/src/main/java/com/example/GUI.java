@@ -42,14 +42,19 @@ public class GUI {
 
 	static JTabbedPane tabbedPane = new JTabbedPane();
 
+	List<FilePanel> activeFiles = new ArrayList<>();
+	boolean isDetailView = false;
+
 	GUI() {
 		updateSearchTags();
 		setUpGUI();
 
+		activeFiles.clear();
 		List<FileItem> fileItems = DbManager.getFileItems();
 		for (FileItem fileItem : fileItems) {
 			FilePanel filePanel = new FilePanel(fileItem);
 			listingPanel.add(filePanel);
+			activeFiles.add(filePanel);
 			System.out.println("Added file panel for " + fileItem.name);
 		}
 		CleanFrame(frame);
@@ -70,6 +75,118 @@ public class GUI {
 		frame.setMinimumSize(new Dimension(600, 340));
 		// frame.setPreferredSize(new Dimension(1000, 600));
 
+		SetUpPanels();
+	}
+
+	private void SetUpPanels() {
+		SetUpTags();
+		JPanel topPanel = SetUpTopPanel();
+		JScrollPane searchPanel = SetUpSearch();
+		JPanel controlPanel = SetUpControlPanel();
+
+		// setup panels//
+		listingPanel.setBorder(BorderFactory.createMatteBorder(30, 30, 30, 30, black));
+		listingPanel.setLayout(new GridLayout(0, 3));
+
+		tagsPanel.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+		tagsPanel.setLayout(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		c.fill = GridBagConstraints.BOTH;
+		c.weightx = 1;
+		c.weighty = 1;
+		c.gridx = 0;
+
+		// tagsPanel.add(new JLabel("Applied tags"), c);
+		// c.gridy = 1;
+		c.weighty = 1;
+		tagsPanel.add(topPanel, c);
+		c.weighty = 6;
+		tagsPanel.add(tabbedPane, c);
+		c.weighty = 1;
+		tagsPanel.add(new JLabel("Search tags"), c);
+		c.weighty = 1;
+		tagsPanel.add(tagSearchField, c);
+		// tagsPanel.setPreferredSize(new Dimension(0, 15));
+		c.weighty = 6;
+		tagsPanel.add(searchPanel, c);
+		tagsPanel.add(controlPanel, c);
+	}
+
+	private JPanel SetUpTopPanel() {
+		JPanel panel = new JPanel();
+		JLabel label = new JLabel("Current db: " + DbManager.contentPath);
+		panel.add(label);
+		JButton switchDirButton = new JButton();
+		switchDirButton.addActionListener(e -> {
+			// DbManager.changeDirectory();
+		});
+		panel.add(switchDirButton);
+		JButton detailToggleButton = new JButton("Detail view");
+		detailToggleButton.addActionListener(e -> {
+			// get all panels from filePanel
+			List<FilePanel> activeFiles = new ArrayList<>();
+			for (java.awt.Component comp : listingPanel.getComponents()) {
+				if (comp instanceof FilePanel) {
+					activeFiles.add((FilePanel) comp);
+				}
+			}
+			System.out.println("Toggling detail view for " + activeFiles.size() + " files");
+
+			isDetailView = !isDetailView;
+			for (FilePanel filePanel : activeFiles) {
+				if (isDetailView)
+					filePanel.showDetailView();
+				else
+					filePanel.showImageView();
+			}
+
+			if (isDetailView) {
+				detailToggleButton.setText("Image view");
+			} else {
+				detailToggleButton.setText("Detail view");
+			}
+		});
+		panel.add(detailToggleButton);
+
+		return panel;
+	}
+
+	private void SetUpTags() {
+		// apply tags//
+		JScrollPane appliedTagsPane = new JScrollPane();
+		appliedTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		appliedTagsPane.setViewportView(appliedTagsList);
+		appliedTagsList.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() >= 2) {
+					changeJList(appliedTagsList, appliedTagsList.getSelectedValue(), -1);
+					updateResults();
+				}
+			}
+		});
+
+		// file tags //
+		JScrollPane fileTagsPane = new JScrollPane();
+		fileTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		fileTagsPane.setViewportView(fileTagsList);
+		fileTagsList.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() >= 2) {
+					DbManager.DeleteTagFromFiles(fileTagsList.getSelectedValue(), selectedFileItems);
+					updateFileTags();
+					updateResults();
+				}
+			}
+		});
+		// jtabbedpane holding apply and file panes
+		tabbedPane.addTab("Applied Tags", appliedTagsPane);
+		tabbedPane.addTab("File Tags", fileTagsPane);
+	}
+
+	private JScrollPane SetUpSearch() {
+		JPanel panel = new JPanel();
 		// search tags//
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -106,40 +223,11 @@ public class GUI {
 				updateSearchTags();
 			}
 		});
+		panel.add(scrollPane);
+		return scrollPane;
+	}
 
-		// apply tags//
-		JScrollPane appliedTagsPane = new JScrollPane();
-		appliedTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		appliedTagsPane.setViewportView(appliedTagsList);
-		appliedTagsList.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (e.getClickCount() >= 2) {
-					changeJList(appliedTagsList, appliedTagsList.getSelectedValue(), -1);
-					updateResults();
-				}
-			}
-		});
-
-		// file tags //
-		JScrollPane fileTagsPane = new JScrollPane();
-		fileTagsPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		fileTagsPane.setViewportView(fileTagsList);
-		fileTagsList.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (e.getClickCount() >= 2) {
-					DbManager.DeleteTagFromFiles(fileTagsList.getSelectedValue(), selectedFileItems);
-					updateFileTags();
-					updateResults();
-				}
-			}
-		});
-
-		// jtabbedpane holding apply and file panes
-		tabbedPane.addTab("Applied Tags", appliedTagsPane);
-		tabbedPane.addTab("File Tags", fileTagsPane);
-
+	private JPanel SetUpControlPanel() {
 		// control//
 		JPanel controlPanel = new JPanel();
 		controlPanel.setLayout(new GridLayout(1, 3));
@@ -164,31 +252,7 @@ public class GUI {
 		controlPanel.add(createTagButton);
 		controlPanel.add(editTagButton);
 		controlPanel.add(deleteTagButton);
-
-		// setup panels//
-		listingPanel.setBorder(BorderFactory.createMatteBorder(30, 30, 30, 30, black));
-		listingPanel.setLayout(new GridLayout(0, 3));
-
-		tagsPanel.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
-		tagsPanel.setLayout(new GridBagLayout());
-		GridBagConstraints c = new GridBagConstraints();
-		c.fill = GridBagConstraints.BOTH;
-		c.weightx = 1;
-		c.weighty = 1;
-		c.gridx = 0;
-
-		// tagsPanel.add(new JLabel("Applied tags"), c);
-		// c.gridy = 1;
-		c.weighty = 6;
-		tagsPanel.add(tabbedPane, c);
-		c.weighty = 1;
-		tagsPanel.add(new JLabel("Search tags"), c);
-		c.weighty = 1;
-		tagsPanel.add(tagSearchField, c);
-		// tagsPanel.setPreferredSize(new Dimension(0, 15));
-		c.weighty = 6;
-		tagsPanel.add(scrollPane, c);
-		tagsPanel.add(controlPanel, c);
+		return controlPanel;
 	}
 
 	private void updateSearchTags() {
