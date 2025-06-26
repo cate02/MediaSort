@@ -25,21 +25,22 @@ public class DbManager {
 
 	static String dbPath;
 	static String dbPathName = "MediaSort";
+	static String dbName = "mediasort";
 	static String contentPath;
+	private static Preferences preferences;
 
 	DbManager() {
+		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		getContentPath();
-		createDatabase();
-		// find new/moved files
-		processDirectory(contentPath);
-		// from db compile list of files
-		getFileItems();
 	}
 
 	private void createDatabase() {
+		System.out.println(5);
 		try {
-			String tempConnDir = "jdbc:sqlite:" + dbPath + "\\db.db";
+			System.out.println(6);
+			String tempConnDir = "jdbc:sqlite:" + dbPath + "\\" + dbName + ".db";
 			conn = DriverManager.getConnection(tempConnDir);
+			System.out.println("coo " + conn);
 			conn.createStatement().execute("PRAGMA foreign_keys = ON;");
 
 			System.out.println(conn);
@@ -74,6 +75,8 @@ public class DbManager {
 						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createTagAliasesTableSQL);
 				System.out.println("Database and tables created successfully.");
+
+				processDirectory(contentPath);
 			}
 
 		} catch (Exception e) {
@@ -83,30 +86,55 @@ public class DbManager {
 
 	private void getContentPath() {
 		System.out.println("DbManager constructor");
-		Preferences preferences = Preferences.userNodeForPackage(MediaSort.class);
+
 		contentPath = preferences.get("contentPath", "");
-		if (contentPath == null || contentPath.isEmpty()) {
-			javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-			chooser.setDialogTitle("Select Content Directory");
-			chooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
-			chooser.setAcceptAllFileFilterUsed(false);
-			int result = chooser.showOpenDialog(null);
-			if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
-				contentPath = chooser.getSelectedFile().getAbsolutePath();
-				preferences.put("contentPath", contentPath); // Save for next time
-			} else {
-				JOptionPane.showMessageDialog(null, "No directory selected. Exiting.", "Error",
-						JOptionPane.ERROR_MESSAGE);
-				System.exit(0);
-			}
-		}
 		dbPath = contentPath + "\\" + dbPathName;
-		System.out.println("DB Path: " + dbPath);
-		File dbFile = new File(dbPath);
-		if (!dbFile.exists()) {
-			dbFile.mkdir();
-			System.out.println("Directory created: " + dbPath);
+		if (!new File(dbPath).exists()) {
+			contentPath = null;
+			// preferences.put("contentPath", "");
+			// getContentPath();
 		}
+
+		if (contentPath == null || contentPath.isEmpty()) {
+			changeDirectory();
+			System.out.println("QQQQQQQQ");
+		}
+		if (contentPath == null || contentPath.isEmpty()) {
+			System.out.println("fuck");
+		} else {
+			dbPath = contentPath + "\\" + dbPathName;
+			System.out.println("DB Path: " + dbPath);
+			File dbFile = new File(dbPath);
+			if (!dbFile.exists()) {
+				dbFile.mkdir();
+				System.out.println("Directory created: " + dbPath);
+			}
+			System.out.println(0);
+			createDatabase();
+		}
+
+	}
+
+	public static void changeDirectory() {
+		System.out.println("a");
+		javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+		chooser.setDialogTitle("Select Content Directory");
+		chooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
+		chooser.setAcceptAllFileFilterUsed(false);
+		int result = chooser.showOpenDialog(null);
+		if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
+			contentPath = chooser.getSelectedFile().getAbsolutePath();
+			preferences.put("contentPath", contentPath); // Save for next time
+			/*
+			 * dbPath = contentPath + "\\" + dbPathName; System.out.println("DB Path: " +
+			 * dbPath); File dbFile = new File(dbPath); if (!dbFile.exists()) {
+			 * dbFile.mkdir(); System.out.println("Directory created: " + dbPath); }
+			 */
+		} else {
+			JOptionPane.showMessageDialog(null, "No directory selected.", "Error", JOptionPane.ERROR_MESSAGE);
+			// System.exit(0);
+		}
+		System.out.println("cc");
 	}
 
 	private static void processDirectory(String directoryPath) {
@@ -148,7 +176,10 @@ public class DbManager {
 					e.printStackTrace();
 				}
 			});
-		} catch (IOException e) {
+			getFileItems();
+		}
+
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

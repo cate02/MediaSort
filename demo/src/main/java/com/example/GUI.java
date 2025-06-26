@@ -114,13 +114,19 @@ public class GUI {
 
 	private JPanel SetUpTopPanel() {
 		JPanel panel = new JPanel();
+		panel.setLayout(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		c.fill = GridBagConstraints.BOTH;
+		c.weightx = 1;
+		c.weighty = 1;
+		c.gridx = 0;
+		c.gridy = 0;
+
 		JLabel label = new JLabel("Current db: " + DbManager.contentPath);
-		panel.add(label);
-		JButton switchDirButton = new JButton();
+		JButton switchDirButton = new JButton("Change db");
 		switchDirButton.addActionListener(e -> {
-			// DbManager.changeDirectory();
+			DbManager.changeDirectory();
 		});
-		panel.add(switchDirButton);
 		JButton detailToggleButton = new JButton("Detail view");
 		detailToggleButton.addActionListener(e -> {
 			// get all panels from filePanel
@@ -146,7 +152,19 @@ public class GUI {
 				detailToggleButton.setText("Detail view");
 			}
 		});
-		panel.add(detailToggleButton);
+		// c.fill = GridBagConstraints.HORIZONTAL;
+		// c.weighty = 2;
+		c.fill = GridBagConstraints.BOTH;
+		c.gridy = 0;
+		c.gridwidth = 2;
+		panel.add(label, c);
+		c.gridx = 0;
+		c.gridy = 1;
+		c.gridwidth = 1;
+		c.weightx = .5;
+		panel.add(switchDirButton, c);
+		c.gridx = 1;
+		panel.add(detailToggleButton, c);
 
 		return panel;
 	}
