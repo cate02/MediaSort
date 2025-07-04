@@ -57,6 +57,7 @@ public class GUI {
 			activeFiles.add(filePanel);
 			System.out.println("Added file panel for " + fileItem.name);
 		}
+		// RefreshListing();
 		CleanFrame(frame);
 	}
 
@@ -125,7 +126,10 @@ public class GUI {
 		JLabel label = new JLabel("Current db: " + DbManager.contentPath);
 		JButton switchDirButton = new JButton("Change db");
 		switchDirButton.addActionListener(e -> {
+			System.out.println("Changing directory");
 			DbManager.changeDirectory();
+			updateResults();
+			updateSearchTags();
 		});
 		JButton detailToggleButton = new JButton("Detail view");
 		detailToggleButton.addActionListener(e -> {
@@ -324,7 +328,12 @@ public class GUI {
 					break;
 				}
 			}
-			listingPanel.add(new FilePanel(fileItem));
+			FilePanel tempFilePanel = new FilePanel(fileItem);
+			if (isDetailView)
+				tempFilePanel.showDetailView();
+			else
+				tempFilePanel.showImageView();
+			listingPanel.add(tempFilePanel);
 		}
 		System.out.println("Updated results with " + fileItems.size() + " items");
 		CleanFrame(frame);

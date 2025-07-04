@@ -34,7 +34,7 @@ public class DbManager {
 		getContentPath();
 	}
 
-	private void createDatabase() {
+	private static void createDatabase() {
 		System.out.println(5);
 		try {
 			System.out.println(6);
@@ -84,20 +84,28 @@ public class DbManager {
 		}
 	}
 
-	private void getContentPath() {
-		System.out.println("DbManager constructor");
+	private static void getContentPath() {
+		System.out.println("getContentPath");
 
 		contentPath = preferences.get("contentPath", "");
 		dbPath = contentPath + "\\" + dbPathName;
 		if (!new File(dbPath).exists()) {
-			contentPath = null;
+			System.out.println("path " + dbPath + " does not exist, creating it");
+			File dbDir = new File(dbPath);
+			if (!dbDir.exists()) {
+				dbDir.mkdir();
+				System.out.println("Directory created: " + dbPath);
+			}
+
+			// contentPath = null;
 			// preferences.put("contentPath", "");
 			// getContentPath();
 		}
 
 		if (contentPath == null || contentPath.isEmpty()) {
+			System.out.println("no content path set, changing directory");
 			changeDirectory();
-			System.out.println("QQQQQQQQ");
+
 		}
 		if (contentPath == null || contentPath.isEmpty()) {
 			System.out.println("fuck");
@@ -116,15 +124,22 @@ public class DbManager {
 	}
 
 	public static void changeDirectory() {
-		System.out.println("a");
+		System.out.println("change directory");
 		javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
 		chooser.setDialogTitle("Select Content Directory");
 		chooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
 		chooser.setAcceptAllFileFilterUsed(false);
+		// set chooser default directory to contentPath
+		if (contentPath != null && !contentPath.isEmpty()) {
+			chooser.setCurrentDirectory(new File(contentPath));
+		} else {
+			chooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+		}
 		int result = chooser.showOpenDialog(null);
 		if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
 			contentPath = chooser.getSelectedFile().getAbsolutePath();
 			preferences.put("contentPath", contentPath); // Save for next time
+			getContentPath();
 			/*
 			 * dbPath = contentPath + "\\" + dbPathName; System.out.println("DB Path: " +
 			 * dbPath); File dbFile = new File(dbPath); if (!dbFile.exists()) {
