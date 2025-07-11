@@ -31,8 +31,7 @@ public class GUI {
 	static Color gray = new Color(128, 128, 128);
 
 	static JFrame frame = new JFrame();
-	JPanel interfacePanel = new JPanel(); // search, listings
-	JPanel listingPanel = new JPanel(); // listings
+	ListingPanel listingPanel = new ListingPanel();
 	JPanel tagsPanel = new JPanel();
 
 	JList<String> searchedTagsList = new JList<>();
@@ -48,12 +47,11 @@ public class GUI {
 	GUI() {
 		updateSearchTags();
 		setUpGUI();
-
 		activeFiles.clear();
 		List<FileItem> fileItems = DbManager.getFileItems();
 		for (FileItem fileItem : fileItems) {
 			FilePanel filePanel = new FilePanel(fileItem);
-			listingPanel.add(filePanel);
+			listingPanel.addPanel(filePanel);
 			activeFiles.add(filePanel);
 			System.out.println("Added file panel for " + fileItem.name);
 		}
@@ -74,7 +72,7 @@ public class GUI {
 
 		// min size frame
 		frame.setMinimumSize(new Dimension(600, 340));
-		// frame.setPreferredSize(new Dimension(1000, 600));
+		frame.setPreferredSize(new Dimension(1000, 600));
 
 		SetUpPanels();
 	}
@@ -87,8 +85,6 @@ public class GUI {
 
 		// setup panels//
 		listingPanel.setBorder(BorderFactory.createMatteBorder(30, 30, 30, 30, black));
-		listingPanel.setLayout(new GridLayout(0, 3));
-
 		tagsPanel.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
 		tagsPanel.setLayout(new GridBagLayout());
 		GridBagConstraints c = new GridBagConstraints();
@@ -259,10 +255,18 @@ public class GUI {
 		});
 		JButton editTagButton = new JButton("Edit tag");
 		editTagButton.addActionListener(e -> {
+			if (searchedTagsList.getSelectedValue() == null) {
+				JOptionPane.showMessageDialog(frame, "No tag selected", "Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
 			// edit tag
 		});
 		JButton deleteTagButton = new JButton("Delete tag");
 		deleteTagButton.addActionListener(e -> {
+			if (searchedTagsList.getSelectedValue() == null) {
+				JOptionPane.showMessageDialog(frame, "No tag selected", "Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
 			// confirm dialog
 			int response = JOptionPane.showConfirmDialog(frame,
 					"Are you sure you want to delete tag: " + searchedTagsList.getSelectedValue() + "?",
@@ -333,7 +337,7 @@ public class GUI {
 				tempFilePanel.showDetailView();
 			else
 				tempFilePanel.showImageView();
-			listingPanel.add(tempFilePanel);
+			listingPanel.addPanel(tempFilePanel);
 		}
 		System.out.println("Updated results with " + fileItems.size() + " items");
 		CleanFrame(frame);
