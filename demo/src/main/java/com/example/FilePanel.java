@@ -27,8 +27,12 @@ public class FilePanel extends JPanel {
 	private Color gray = new Color(128, 128, 128);
 	private CardLayout cardLayout = new CardLayout();
 	private JPanel cards = new JPanel(cardLayout);
+	private JLabel imgLabel = new JLabel();
+	private Image image;
+	private JPanel namePanel;
 
 	public FilePanel(FileItem fileItem) {
+
 		this.fileItem = fileItem;
 		setLayout(new BorderLayout());
 		setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
@@ -44,7 +48,7 @@ public class FilePanel extends JPanel {
 			}
 		});
 		JLabel nameLabel = new JLabel(fileItem.name);
-		JPanel namePanel = new JPanel();
+		namePanel = new JPanel();
 		namePanel.setLayout(new BorderLayout());
 		namePanel.add(nameLabel, BorderLayout.CENTER);
 		namePanel.add(checkBox, BorderLayout.EAST);
@@ -60,16 +64,17 @@ public class FilePanel extends JPanel {
 
 	private JPanel createImageView() {
 		JPanel panel = new JPanel();
-		JLabel imgLabel = new JLabel();
+		imgLabel.setHorizontalAlignment(JLabel.CENTER);
+		imgLabel.setVerticalAlignment(JLabel.CENTER);
 		panel.add(imgLabel, BorderLayout.CENTER);
 
 		if (isImageFile(fileItem.file)) {
 			try {
-				Image image = ImageIO.read(fileItem.file);
-				Image scaledImage = image.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-				imgLabel.setIcon(new ImageIcon(scaledImage));
-			} catch (IOException ex) {
+				image = ImageIO.read(fileItem.file);
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
+			drawImage();
 		} else {
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
 		}
@@ -103,7 +108,7 @@ public class FilePanel extends JPanel {
 	}
 
 	static boolean isImageFile(File file) {
-		String[] imageExtensions = new String[] { "jpg", "jpeg", "png", "gif", "bmp" };
+		String[] imageExtensions = new String[] { "jpg", "jpeg", "png", "gif", "bmp", "webp" };
 		for (String extension : imageExtensions) {
 			if (file.getName().endsWith(extension)) {
 				return true;
@@ -118,5 +123,28 @@ public class FilePanel extends JPanel {
 
 	public void showDetailView() {
 		cardLayout.show(cards, "detail");
+	}
+
+	public void drawImage() {
+		if (image == null) {
+			return;
+		}
+
+		int imgWidth = image.getWidth(null);
+		int imgHeight = image.getHeight(null);
+		int panelWidth = ListingPanel.panelWidth;
+		int panelHeight = ListingPanel.panelHeight;
+		panelHeight -= namePanel.getHeight() * 2;
+
+		double scaleX = (double) panelWidth / imgWidth;
+		double scaleY = (double) panelHeight / imgHeight;
+		double scale = Math.min(scaleX, scaleY); // fit inside panel
+
+		int newW = (int) (imgWidth * scale);
+		int newH = (int) (imgHeight * scale);
+
+		Image scaledImage = image.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+		imgLabel.setIcon(new ImageIcon(scaledImage));
+
 	}
 }

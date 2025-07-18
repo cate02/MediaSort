@@ -2,7 +2,6 @@ package com.example;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -10,6 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -25,6 +25,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 public class GUI {
+	private static Preferences preferences;
+
 	static List<FileItem> selectedFileItems = new ArrayList<>();
 
 	static Color black = new Color(0, 0, 0);
@@ -41,10 +43,11 @@ public class GUI {
 
 	static JTabbedPane tabbedPane = new JTabbedPane();
 
-	List<FilePanel> activeFiles = new ArrayList<>();
+	static List<FilePanel> activeFiles = new ArrayList<>();
 	boolean isDetailView = false;
 
 	GUI() {
+		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		updateSearchTags();
 		setUpGUI();
 		activeFiles.clear();
@@ -53,7 +56,7 @@ public class GUI {
 			FilePanel filePanel = new FilePanel(fileItem);
 			listingPanel.addPanel(filePanel);
 			activeFiles.add(filePanel);
-			System.out.println("Added file panel for " + fileItem.name);
+			// System.out.println("Added file panel for " + fileItem.name);
 		}
 		// RefreshListing();
 		CleanFrame(frame);
@@ -64,15 +67,32 @@ public class GUI {
 
 		frame.setVisible(true);
 		frame.setTitle("MediaSort");
-		frame.setLocationRelativeTo(null);
+		// frame.setLocationRelativeTo(null);
+		int frameWidth = preferences.getInt("frameWidth", 1000);
+		int frameHeight = preferences.getInt("frameHeight", 600);
+		frame.setSize(frameWidth, frameHeight);
+		int frameX = preferences.getInt("frameX", 100);
+		int frameY = preferences.getInt("frameY", 100);
+		frame.setLocation(frameX, frameY);
 		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.add(listingPanel, BorderLayout.CENTER);
 		frame.add(tagsPanel, BorderLayout.WEST);
 
 		// min size frame
-		frame.setMinimumSize(new Dimension(600, 340));
-		frame.setPreferredSize(new Dimension(1000, 600));
+		// frame.setMinimumSize(new Dimension(600, 340));
+		// frame.setPreferredSize(new Dimension(1000, 600));
+
+		// when program closed
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				preferences.putInt("frameWidth", frame.getWidth());
+				preferences.putInt("frameHeight", frame.getHeight());
+				preferences.putInt("frameX", frame.getX());
+				preferences.putInt("frameY", frame.getY());
+			}
+		});
 
 		SetUpPanels();
 	}
@@ -122,7 +142,7 @@ public class GUI {
 		JLabel label = new JLabel("Current db: " + DbManager.contentPath);
 		JButton switchDirButton = new JButton("Change db");
 		switchDirButton.addActionListener(e -> {
-			System.out.println("Changing directory");
+			// System.out.println("Changing directory");
 			DbManager.changeDirectory();
 			updateResults();
 			updateSearchTags();
@@ -503,7 +523,7 @@ public class GUI {
 
 	static void CleanFrame(JFrame frame) {
 		// frame.getContentPane().removeAll();
-		frame.pack();
+		// frame.pack();
 		frame.repaint();
 		frame.revalidate();
 		// System.out.println("Cleaned frame");

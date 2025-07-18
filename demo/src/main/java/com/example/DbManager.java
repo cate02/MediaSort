@@ -35,15 +35,11 @@ public class DbManager {
 	}
 
 	private static void createDatabase() {
-		System.out.println(5);
 		try {
-			System.out.println(6);
 			String tempConnDir = "jdbc:sqlite:" + dbPath + "\\" + dbName + ".db";
 			conn = DriverManager.getConnection(tempConnDir);
-			System.out.println("coo " + conn);
 			conn.createStatement().execute("PRAGMA foreign_keys = ON;");
 
-			System.out.println(conn);
 			System.out.println("Connection to SQLite has been established.");
 			if (conn != null) {
 				// create if not exist tags, PK id, not null string tag
@@ -85,7 +81,6 @@ public class DbManager {
 	}
 
 	private static void getContentPath() {
-		System.out.println("getContentPath");
 
 		contentPath = preferences.get("contentPath", "");
 		dbPath = contentPath + "\\" + dbPathName;
@@ -117,14 +112,12 @@ public class DbManager {
 				dbFile.mkdir();
 				System.out.println("Directory created: " + dbPath);
 			}
-			System.out.println(0);
 			createDatabase();
 		}
 
 	}
 
 	public static void changeDirectory() {
-		System.out.println("change directory");
 		javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
 		chooser.setDialogTitle("Select Content Directory");
 		chooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
@@ -149,7 +142,6 @@ public class DbManager {
 			JOptionPane.showMessageDialog(null, "No directory selected.", "Error", JOptionPane.ERROR_MESSAGE);
 			// System.exit(0);
 		}
-		System.out.println("cc");
 	}
 
 	private static void processDirectory(String directoryPath) {
@@ -171,7 +163,7 @@ public class DbManager {
 		// Walk through the directory recursively
 		try {
 			Files.walk(directory.toPath()).filter(Files::isRegularFile).forEach(filePath -> {
-				System.out.println("File: " + filePath);
+				// System.out.println("File: " + filePath);
 				// if directory contains folder dbpath
 				if (filePath.toString().contains(dbPathName)) {
 					System.out.println("Directory contains db path");
@@ -185,7 +177,7 @@ public class DbManager {
 						System.out.println("Unique file: " + filePath);
 						insertIntoDatabase(newFile);
 					} else {
-						System.out.println("Duplicate file: " + filePath);
+						// System.out.println("Duplicate file: " + filePath);
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
