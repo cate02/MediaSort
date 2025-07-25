@@ -40,11 +40,13 @@ public class FilePanel extends JPanel {
 		JCheckBox checkBox = new JCheckBox();
 		checkBox.addActionListener(e -> {
 			if (checkBox.isSelected()) {
+				ListingPanel.changeSelectedFiles(fileItem, 1);
 				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, Color.GREEN));
-				GUI.changeSelectedFiles(fileItem, 1);
+				// GUI.changeSelectedFiles(fileItem, 1);
 			} else {
+				ListingPanel.changeSelectedFiles(fileItem, -1);
 				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
-				GUI.changeSelectedFiles(fileItem, -1);
+				// GUI.changeSelectedFiles(fileItem, -1);
 			}
 		});
 		JLabel nameLabel = new JLabel(fileItem.name);

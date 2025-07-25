@@ -8,8 +8,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.prefs.Preferences;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -20,6 +23,7 @@ import javax.swing.ScrollPaneConstants;
 
 public class ListingPanel extends JPanel {
 	private boolean debugListing = false;
+	static Color black = new Color(0, 0, 0);
 
 	private static Preferences preferences;
 
@@ -27,12 +31,17 @@ public class ListingPanel extends JPanel {
 	public static int panelHeight = 50;
 	private int panelGap = 2;
 
-	private JPanel contentPanel;
+	public JPanel contentPanel;
 	private JScrollPane scrollPane;
-	private JCheckBox autoRefreshCheck = new JCheckBox("Auto Refresh", false);
+	private JCheckBox autoRefreshCheck = new JCheckBox("Auto Refresh", true);
 	private int scrollBarPosition = 0;
 
+	public List<FilePanel> activeFilePanels = new ArrayList<>();
+	public static List<FileItem> selectedFiles = new ArrayList<>();
+
 	public ListingPanel() {
+		setBorder(BorderFactory.createMatteBorder(30, 30, 30, 30, black));
+
 		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		panelWidth = preferences.getInt("panelWidth", 40);
 		panelHeight = preferences.getInt("panelHeight", 50);
@@ -83,10 +92,16 @@ public class ListingPanel extends JPanel {
 	}
 
 	public void addPanel(JPanel panel) {
+		activeFilePanels.add((FilePanel) panel);
 		panel.setSize(panelWidth, panelHeight);
 		contentPanel.add(panel);
 		layoutPanels();
-		updateImageScales();
+		// updateImageScales();
+	}
+
+	public void removeAllPanels() {
+		contentPanel.removeAll();
+		activeFilePanels.clear();
 	}
 
 	private JPanel SetUpTopPanel() {
@@ -138,10 +153,12 @@ public class ListingPanel extends JPanel {
 		widthSlider.addChangeListener(e -> {
 			panelWidth = widthSlider.getValue();
 			preferences.putInt("panelWidth", panelWidth);
-			if (autoRefreshCheck.isSelected()) {
-				updateImageScales();
-				layoutPanels();
+			if (widthSlider.getValueIsAdjusting() == false) {
+				if (autoRefreshCheck.isSelected()) {
+					updateImageScales();
+				}
 			}
+			layoutPanels();
 		});
 		panel.add(widthSlider, c);
 
@@ -157,10 +174,12 @@ public class ListingPanel extends JPanel {
 		heightSlider.addChangeListener(e -> {
 			panelHeight = heightSlider.getValue();
 			preferences.putInt("panelHeight", panelHeight);
-			if (autoRefreshCheck.isSelected()) {
-				updateImageScales();
-				layoutPanels();
+			if (heightSlider.getValueIsAdjusting() == false) {
+				if (autoRefreshCheck.isSelected()) {
+					updateImageScales();
+				}
 			}
+			layoutPanels();
 		});
 		panel.add(heightSlider, c);
 
@@ -188,7 +207,7 @@ public class ListingPanel extends JPanel {
 		return panel;
 	}
 
-	private void layoutPanels() {
+	public void layoutPanels() {
 		int width = scrollPane.getViewport().getWidth();
 		if (width == 0)
 			width = 600; // fallback for initial layout
@@ -223,5 +242,28 @@ public class ListingPanel extends JPanel {
 		for (FilePanel filePanel : GUI.activeFiles) {
 			filePanel.drawImage();
 		}
+	}
+
+	static void changeSelectedFiles(FileItem fileItem, int action) {
+
+		if (fileItem != null) {
+			if (action == 1) {
+				selectedFiles.add(fileItem);
+			} else if (action == -1) {
+				selectedFiles.remove(fileItem);
+			}
+		} else {
+			if (action == -1) {
+				selectedFiles.clear();
+			}
+		}
+
+		if (selectedFiles.size() <= 0) {
+			GUI.tabbedPane.setEnabledAt(1, false);
+			GUI.tabbedPane.setSelectedIndex(0);
+		} else {
+			GUI.tabbedPane.setEnabledAt(1, true);
+		}
+		System.out.println("Selected items: " + selectedFiles.size());
 	}
 }
