@@ -9,6 +9,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -27,23 +29,22 @@ public class InfoPanel extends JPanel {
 
 	static Color gray = new Color(128, 128, 128);
 
-	JList<String> searchedTagsList = new JList<>();
-	JList<String> appliedTagsList = new JList<>();
+	static JList<String> searchedTagsList = new JList<>();
+	static JList<String> appliedTagsList = new JList<>();
 	static JList<String> fileTagsList = new JList<>();
-	JTextField tagSearchField = new JTextField();
+	static JTextField tagSearchField = new JTextField();
 
 	public static JTabbedPane tabbedPane = new JTabbedPane();
 
-	public ListingPanel listingPanel;
-	public JFrame frame;
+	public static ListingPanel listingPanel;
+	public static JFrame frame;
 
 	static List<FilePanel> activeFiles = new ArrayList<>();
-	boolean isDetailView = false;
+	static boolean isDetailView = false;
 
 	public InfoPanel() {
 		// pref size
 		// setPreferredSize(new java.awt.Dimension(300, 600));
-
 		SetUpPanels();
 
 	}
@@ -245,7 +246,7 @@ public class InfoPanel extends JPanel {
 		return controlPanel;
 	}
 
-	private static void updateFileTags() {
+	public static void updateFileTags() {
 		// find all tags that all selected files use
 		// add tags to file tags list
 
@@ -261,36 +262,44 @@ public class InfoPanel extends JPanel {
 		List<String> tags = new ArrayList<>();
 		foundTags = DbManager.findTags(ListingPanel.selectedFiles);
 		fileTagsList.setListData(foundTags.toArray(new String[0]));
+		System.out.println(foundTags.toArray(new String[0]));
 	}
 
-	private void updateResults() {
+	private static void updateResults() {
 		List<FileItem> fileItems;
 		List<String> tags = new ArrayList<>();
 		for (int i = 0; i < appliedTagsList.getModel().getSize(); i++) {
 			tags.add(appliedTagsList.getModel().getElementAt(i));
 		}
 
-		if (appliedTagsList.getModel().getSize() == 0)
+		if (appliedTagsList.getModel().getSize() == 0) {
 			fileItems = DbManager.getFileItems();
-		else
+		} else {
 			fileItems = DbManager.findFiles(tags);
+		}
+
+		// Build a lookup of previously selected items by id
+		Map<Integer, FileItem> previouslySelectedById = ListingPanel.selectedFiles.stream()
+				.collect(Collectors.toMap(f -> f.id, f -> f));
+
+		// Reset the selectedFiles list before repopulating
+		ListingPanel.selectedFiles.clear();
 
 		listingPanel.contentPanel.removeAll();
 		for (FileItem fileItem : fileItems) {
-			listingPanel.addPanel(new FilePanel(fileItem));
-		}
+			FileItem old = previouslySelectedById.get(fileItem.id);
+			if (old != null) {
+				fileItem.isSelected = old.isSelected;
+				ListingPanel.selectedFiles.add(fileItem);
+			}
 
-		/*
-		 * List<FileItem> oldSelectedFileItems = new ArrayList<>(selectedFileItems);
-		 * selectedFileItems.clear();
-		 *
-		 * for (FileItem fileItem : fileItems) { for (FileItem selectedFileItem :
-		 * oldSelectedFileItems) { if (selectedFileItem.id == fileItem.id) {
-		 * fileItem.isSelected = selectedFileItem.isSelected;
-		 * selectedFileItems.add(fileItem); break; } } FilePanel tempFilePanel = new
-		 * FilePanel(fileItem); if (isDetailView) tempFilePanel.showDetailView(); else
-		 * tempFilePanel.showImageView(); listingPanel.addPanel(tempFilePanel); }
-		 */
+			FilePanel tempFilePanel = new FilePanel(fileItem);
+			if (isDetailView)
+				tempFilePanel.showDetailView();
+			else
+				tempFilePanel.showImageView();
+			listingPanel.addPanel(tempFilePanel);
+		}
 
 		// listingPanel.layoutPanels();
 		listingPanel.updateImageScales();
@@ -311,7 +320,7 @@ public class InfoPanel extends JPanel {
 		list.setListData(temp.toArray(new String[0]));
 	}
 
-	private void updateSearchTags() {
+	public static void updateSearchTags() {
 		String search = tagSearchField.getText();
 		List<String> foundTags = DbManager.findTags(search);
 		if (foundTags == null) {

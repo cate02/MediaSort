@@ -1,6 +1,7 @@
 package com.example;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -60,13 +61,29 @@ public class GUI {
 		int frameX = preferences.getInt("frameX", 100);
 		int frameY = preferences.getInt("frameY", 100);
 		frame.setLocation(frameX, frameY);
-		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+		infoPanel.setMinimumSize(new Dimension(150, 0));
+		listingPanel.setMinimumSize(new Dimension(150, 0));
+
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+
+		splitPane.setContinuousLayout(true); // live dragging
+		splitPane.setOneTouchExpandable(true); // little arrows to collapse/expand
+
 		splitPane.setLeftComponent(infoPanel);
 		splitPane.setRightComponent(listingPanel);
 		frame.add(splitPane, BorderLayout.CENTER);
+
+		int dividerLocation = preferences.getInt("splitPaneDividerLocation", frameWidth / 4);
+		splitPane.setDividerLocation(dividerLocation);
+
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				preferences.putInt("splitPaneDividerLocation", splitPane.getDividerLocation());
+			}
+		});
 
 		// frame.add(listingPanel, BorderLayout.CENTER);
 		// frame.add(infoPanel, BorderLayout.WEST);

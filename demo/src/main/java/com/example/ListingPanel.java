@@ -29,10 +29,10 @@ public class ListingPanel extends JPanel {
 
 	public static int panelWidth = 40;
 	public static int panelHeight = 50;
-	private int panelGap = 2;
+	private static int panelGap = 2;
 
-	public JPanel contentPanel;
-	private JScrollPane scrollPane;
+	public static JPanel contentPanel;
+	private static JScrollPane scrollPane;
 	private JCheckBox autoRefreshCheck = new JCheckBox("Auto Refresh", true);
 	private int scrollBarPosition = 0;
 
@@ -207,7 +207,7 @@ public class ListingPanel extends JPanel {
 		return panel;
 	}
 
-	public void layoutPanels() {
+	public static void layoutPanels() {
 		int width = scrollPane.getViewport().getWidth();
 		if (width == 0)
 			width = 600; // fallback for initial layout
@@ -238,13 +238,14 @@ public class ListingPanel extends JPanel {
 		contentPanel.repaint();
 	}
 
-	void updateImageScales() {
+	static void updateImageScales() {
 		for (FilePanel filePanel : GUI.activeFiles) {
 			filePanel.drawImage();
 		}
 	}
 
 	static void changeSelectedFiles(FileItem fileItem, int action) {
+		fileItem.isSelected = action == 1;
 
 		if (fileItem != null) {
 			if (action == 1) {
@@ -259,11 +260,13 @@ public class ListingPanel extends JPanel {
 		}
 
 		if (selectedFiles.size() <= 0) {
-			GUI.tabbedPane.setEnabledAt(1, false);
-			GUI.tabbedPane.setSelectedIndex(0);
+			InfoPanel.tabbedPane.setEnabledAt(1, false);
+			InfoPanel.tabbedPane.setSelectedIndex(0);
 		} else {
-			GUI.tabbedPane.setEnabledAt(1, true);
+			InfoPanel.tabbedPane.setEnabledAt(1, true);
+			InfoPanel.tabbedPane.setSelectedIndex(1);
 		}
 		System.out.println("Selected items: " + selectedFiles.size());
+		InfoPanel.updateFileTags();
 	}
 }

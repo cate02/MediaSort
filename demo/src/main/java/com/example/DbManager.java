@@ -247,13 +247,6 @@ public class DbManager {
 
 	}
 
-	/*
-	 * public static List<File> getFiles() throws SQLException { String selectSQL =
-	 * "SELECT * FROM files;"; PreparedStatement stmt =
-	 * conn.prepareStatement(selectSQL); ResultSet rs = stmt.executeQuery();
-	 * List<File> files = new ArrayList<>(); int i = 0; while (rs.next()) {
-	 * files.add(new File(rs.getString("path"))); i++; } return files; }
-	 */
 	public static List<FileItem> getFileItems() {
 		// fill fileitems from db
 		List<FileItem> fileItems = new ArrayList<>();
