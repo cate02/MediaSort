@@ -31,21 +31,24 @@ public class FilePanel extends JPanel {
 	private Image image;
 	private JPanel namePanel;
 
+	private int borderSize = 3;
+
 	public FilePanel(FileItem fileItem) {
 
 		this.fileItem = fileItem;
 		setLayout(new BorderLayout());
-		setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, fileItem.isSelected ? Color.green : gray));
+		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize,
+				fileItem.isSelected ? Color.green : gray));
 
 		JCheckBox checkBox = new JCheckBox();
 		checkBox.setSelected(fileItem.isSelected);
 		checkBox.addActionListener(e -> {
 			if (checkBox.isSelected()) {
 				ListingPanel.changeSelectedFiles(fileItem, 1);
-				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, Color.GREEN));
+				setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, Color.GREEN));
 			} else {
 				ListingPanel.changeSelectedFiles(fileItem, -1);
-				setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+				setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, gray));
 			}
 		});
 		JLabel nameLabel = new JLabel(fileItem.name);

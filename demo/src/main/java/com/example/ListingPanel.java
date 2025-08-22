@@ -40,7 +40,8 @@ public class ListingPanel extends JPanel {
 	public static List<FileItem> selectedFiles = new ArrayList<>();
 
 	public ListingPanel() {
-		setBorder(BorderFactory.createMatteBorder(30, 30, 30, 30, black));
+		// setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, InfoPanel.gray));
+		setBorder(BorderFactory.createMatteBorder(0, 5, 0, 0, InfoPanel.gray));
 
 		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		panelWidth = preferences.getInt("panelWidth", 40);

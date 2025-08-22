@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
 
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JSplitPane;
@@ -84,6 +85,7 @@ public class GUI {
 				preferences.putInt("splitPaneDividerLocation", splitPane.getDividerLocation());
 			}
 		});
+		splitPane.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, InfoPanel.gray));
 
 		// frame.add(listingPanel, BorderLayout.CENTER);
 		// frame.add(infoPanel, BorderLayout.WEST);

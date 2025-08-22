@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -56,7 +55,8 @@ public class InfoPanel extends JPanel {
 		JPanel controlPanel = SetUpControlPanel();
 
 		// setup panels//
-		setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+		// setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, gray));
+		// setBorder(BorderFactory.createMatteBorder(0, 0, 0, 5, gray));
 		setLayout(new GridBagLayout());
 		GridBagConstraints c = new GridBagConstraints();
 		c.fill = GridBagConstraints.BOTH;
@@ -440,6 +440,7 @@ public class InfoPanel extends JPanel {
 		CleanFrame(frame);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+		frame.pack();
 		frame.requestFocus();
 	}
 

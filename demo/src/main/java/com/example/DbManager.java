@@ -28,19 +28,20 @@ public class DbManager {
 	static String dbName = "mediasort";
 	static String contentPath;
 	private static Preferences preferences;
+	static String tempConnDir;
 
 	DbManager() {
 		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		getContentPath();
 	}
 
-	private static void createDatabase() {
+	static void createDatabase() {
 		try {
-			String tempConnDir = "jdbc:sqlite:" + dbPath + "\\" + dbName + ".db";
+			tempConnDir = "jdbc:sqlite:" + dbPath + "\\" + dbName + ".db";
 			conn = DriverManager.getConnection(tempConnDir);
 			conn.createStatement().execute("PRAGMA foreign_keys = ON;");
 
-			System.out.println("Connection to SQLite has been established.");
+			System.out.println("Connection to SQLite has been established. " + tempConnDir);
 			if (conn != null) {
 				// create if not exist tags, PK id, not null string tag
 				String createTagsTableSQL = "CREATE TABLE IF NOT EXISTS tags ("
@@ -57,21 +58,37 @@ public class DbManager {
 						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE, "
 						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createFileTagsTableSQL);
-				// tag connections id fk parent_tag_id, child_tag_id
-				String createTagConnectionsTableSQL = "CREATE TABLE IF NOT EXISTS tag_connections ("
-						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "parent_tag_id INTEGER NOT NULL, "
-						+ "child_tag_id INTEGER NOT NULL, "
-						+ "FOREIGN KEY (parent_tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
-						+ "FOREIGN KEY (child_tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
-				conn.createStatement().execute(createTagConnectionsTableSQL);
 				// tag_aliases id, fk tag_id, alias
 				String createTagAliasesTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
 						+ "alias TEXT NOT NULL UNIQUE, "
 						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createTagAliasesTableSQL);
-				System.out.println("Database and tables created successfully.");
+				// file_tags.db id, FK:file_id, FK:tag_id
+				String createFileTagsDbTableSQL = "CREATE TABLE IF NOT EXISTS file_tags ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "file_id INTEGER NOT NULL, "
+						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE, "
+						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
+				conn.createStatement().execute(createFileTagsDbTableSQL);
+				// aliases.db id, alias
+				String createAliasesDbTableSQL = "CREATE TABLE IF NOT EXISTS aliases ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "alias TEXT NOT NULL UNIQUE);";
+				conn.createStatement().execute(createAliasesDbTableSQL);
+				// tag_aliases.db id, FK:tag_id, FK:alias_id
+				String createTagAliasesDbTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
+						+ "alias_id INTEGER NOT NULL, " + "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
+						+ "FOREIGN KEY (alias_id) REFERENCES aliases_db(id) ON DELETE CASCADE);";
+				conn.createStatement().execute(createTagAliasesDbTableSQL);
+				// tag_connections.db id, FK:tag_id, FK:connection_tag_id
+				String createTagConnectionsDbTableSQL = "CREATE TABLE IF NOT EXISTS tag_connections ("
+						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
+						+ "connection_tag_id INTEGER NOT NULL, "
+						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
+						+ "FOREIGN KEY (connection_tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
+				conn.createStatement().execute(createTagConnectionsDbTableSQL);
 
+				System.out.println("Database and tables created successfully.");
 				processDirectory(contentPath);
 			}
 
