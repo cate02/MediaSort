@@ -385,12 +385,16 @@ public class DbManager {
 	}
 
 	public static int createTag(String tag) {
+		if (doesTagExist(tag))
+			return 0;
 		try {
 			String insertSubTagSQL = "INSERT INTO tags (tag) VALUES (?);";
 			PreparedStatement stmt = conn.prepareStatement(insertSubTagSQL);
 			stmt.setString(1, tag);
 			stmt.executeUpdate();
 		} catch (SQLException ex) {
+			System.out.println("Error creating tag: " + ex.getMessage());
+			return 0;
 		}
 		if (doesTagExist(tag))
 			return 1;
@@ -431,7 +435,7 @@ public class DbManager {
 		return tags;
 	}
 
-	public static void DeleteTag(String tag) {
+	public static int deleteTag(String tag) {
 		try {
 			String deleteSQL = "DELETE FROM tags WHERE tag = ?;";
 			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
@@ -439,10 +443,16 @@ public class DbManager {
 			stmt.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			return 0;
+		}
+		if (doesTagExist(tag)) {
+			return 0;
+		} else {
+			return 1;
 		}
 	}
 
-	public static void DeleteTagFromFiles(String tag, List<FileItem> files) {
+	public static void deleteTagFromFiles(String tag, List<FileItem> files) {
 		try {
 			String deleteSQL = "DELETE FROM file_tags WHERE file_id = ? AND tag_id = (SELECT id FROM tags WHERE tag = ?);";
 			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
@@ -455,4 +465,21 @@ public class DbManager {
 			e.printStackTrace();
 		}
 	}
+
+	public static List<String> findAliases(String search) {
+		List<String> aliases = new ArrayList<>();
+		try {
+			String selectSQL = "SELECT alias FROM tag_aliases WHERE alias LIKE ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, "%" + search + "%");
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				aliases.add(rs.getString("alias"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return aliases;
+	}
+
 }

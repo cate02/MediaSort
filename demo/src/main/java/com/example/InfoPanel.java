@@ -158,7 +158,7 @@ public class InfoPanel extends JPanel {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-					DbManager.DeleteTagFromFiles(fileTagsList.getSelectedValue(), ListingPanel.selectedFiles);
+					DbManager.deleteTagFromFiles(fileTagsList.getSelectedValue(), ListingPanel.selectedFiles);
 					updateFileTags();
 					updateResults();
 				}
@@ -237,7 +237,7 @@ public class InfoPanel extends JPanel {
 					"Are you sure you want to delete tag: " + searchedTagsList.getSelectedValue() + "?",
 					"Confirm Delete tag " + searchedTagsList.getSelectedValue(), JOptionPane.YES_NO_OPTION);
 			if (response == JOptionPane.YES_OPTION) {
-				DbManager.DeleteTag(searchedTagsList.getSelectedValue());
+				DbManager.deleteTag(searchedTagsList.getSelectedValue());
 			}
 		});
 		controlPanel.add(createTagButton);
