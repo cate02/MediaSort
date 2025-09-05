@@ -12,7 +12,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.prefs.Preferences;
 
 import javax.swing.JOptionPane;
@@ -58,12 +60,6 @@ public class DbManager {
 						+ "tag_id INTEGER NOT NULL, " + "FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE, "
 						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createFileTagsTableSQL);
-				// tag_aliases id, fk tag_id, alias
-				String createTagAliasesTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
-						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
-						+ "alias TEXT NOT NULL UNIQUE, "
-						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
-				conn.createStatement().execute(createTagAliasesTableSQL);
 				// file_tags.db id, FK:file_id, FK:tag_id
 				String createFileTagsDbTableSQL = "CREATE TABLE IF NOT EXISTS file_tags ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "file_id INTEGER NOT NULL, "
@@ -78,15 +74,8 @@ public class DbManager {
 				String createTagAliasesDbTableSQL = "CREATE TABLE IF NOT EXISTS tag_aliases ("
 						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
 						+ "alias_id INTEGER NOT NULL, " + "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
-						+ "FOREIGN KEY (alias_id) REFERENCES aliases_db(id) ON DELETE CASCADE);";
+						+ "FOREIGN KEY (alias_id) REFERENCES aliases(id) ON DELETE CASCADE);";
 				conn.createStatement().execute(createTagAliasesDbTableSQL);
-				// tag_connections.db id, FK:tag_id, FK:connection_tag_id
-				String createTagConnectionsDbTableSQL = "CREATE TABLE IF NOT EXISTS tag_connections ("
-						+ "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "tag_id INTEGER NOT NULL, "
-						+ "connection_tag_id INTEGER NOT NULL, "
-						+ "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, "
-						+ "FOREIGN KEY (connection_tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
-				conn.createStatement().execute(createTagConnectionsDbTableSQL);
 
 				System.out.println("Database and tables created successfully.");
 				processDirectory(contentPath);
@@ -421,7 +410,7 @@ public class DbManager {
 		// where t.tag like ? or ta.alias like ?;
 		List<String> tags = new ArrayList<>();
 		try {
-			String selectSQL = "SELECT t.tag, t.id FROM tags t LEFT JOIN tag_aliases ta ON t.id = ta.tag_id WHERE t.tag LIKE ? OR ta.alias LIKE ?;";
+			String selectSQL = "SELECT t.tag, t.id FROM tags t LEFT JOIN tag_aliases ta ON t.id = ta.tag_id LEFT JOIN aliases a ON ta.alias_id = a.id WHERE t.tag LIKE ? OR a.alias LIKE ?;";
 			PreparedStatement stmt = conn.prepareStatement(selectSQL);
 			stmt.setString(1, "%" + search + "%");
 			stmt.setString(2, "%" + search + "%");
@@ -466,20 +455,118 @@ public class DbManager {
 		}
 	}
 
-	public static List<String> findAliases(String search) {
-		List<String> aliases = new ArrayList<>();
+	public static Map<String, Boolean> findAliases(String tag, String search) {
+		Map<String, Boolean> aliasesMap = new LinkedHashMap<>();
+		// add all aliases.alias in string, then for all aliases map, if taghasalias,
+		// boolean=1
 		try {
-			String selectSQL = "SELECT alias FROM tag_aliases WHERE alias LIKE ?;";
+			String selectSQL = "SELECT alias FROM aliases WHERE alias LIKE ?;";
 			PreparedStatement stmt = conn.prepareStatement(selectSQL);
 			stmt.setString(1, "%" + search + "%");
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
-				aliases.add(rs.getString("alias"));
+				String alias = rs.getString("alias");
+				boolean hasAlias = tagHasAlias(tag, alias);
+				aliasesMap.put(alias, hasAlias);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return aliases;
+
+		return aliasesMap;
+	}
+
+	public static boolean tagHasAlias(String tag, String alias) {
+		boolean result = false;
+		// if in tag_aliases tag_id has alias_id
+		try {
+			String selectSQL = "SELECT COUNT(*) FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE tag = ?) AND alias_id = (SELECT id FROM aliases WHERE alias = ?);";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, alias);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				result = rs.getInt(1) > 0;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
+	public static int createAlias(String alias) {
+		if (doesAliasExist(alias))
+			return 0;
+		try {
+			String insertAliasSQL = "INSERT INTO aliases (alias) VALUES (?);";
+			PreparedStatement stmt = conn.prepareStatement(insertAliasSQL);
+			stmt.setString(1, alias);
+			stmt.executeUpdate();
+		} catch (SQLException ex) {
+			System.out.println("Error creating alias: " + ex.getMessage());
+			return 0;
+		}
+		if (doesAliasExist(alias))
+			return 1;
+		else
+			return 0;
+	}
+
+	public static int deleteAlias(String alias) {
+		try {
+			String deleteSQL = "DELETE FROM aliases WHERE alias = ?;";
+			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
+			stmt.setString(1, alias);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return 0;
+		}
+		if (doesAliasExist(alias)) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+
+	public static boolean doesAliasExist(String alias) {
+		try {
+			String selectSQL = "SELECT COUNT(*) FROM aliases WHERE alias = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, alias);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				return rs.getInt(1) > 0;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	public static void addAliasToTag(String tag, String alias) {
+		try {
+			String insertSQL = "INSERT INTO tag_aliases (tag_id, alias_id) VALUES ((SELECT id FROM tags WHERE tag = ?), (SELECT id FROM aliases WHERE alias = ?));";
+			PreparedStatement stmt = conn.prepareStatement(insertSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, alias);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void removeAliasFromTag(String tag, String alias) {
+		try {
+			String deleteSQL = "DELETE FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE tag = ?) AND alias_id = (SELECT id FROM aliases WHERE alias = ?);";
+			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, alias);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

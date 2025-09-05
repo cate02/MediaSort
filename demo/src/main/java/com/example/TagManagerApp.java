@@ -62,7 +62,7 @@ public class TagManagerApp extends JFrame {
 		DbManager dbManager = new DbManager();
 		// dbManager.createDatabase(); // ensure DB and tables exist
 		String tempConnDir = DbManager.tempConnDir;
-		Connection conn = dbManager.getConnection(tempConnDir);
+		Connection conn = DriverManager.getConnection(tempConnDir);
 
 		// Connection conn = DriverManager.getConnection("jdbc:sqlite:mytags.db");
 		SwingUtilities.invokeLater(() -> {
@@ -252,7 +252,7 @@ public class TagManagerApp extends JFrame {
 
 	private void loadAliases(String text) {
 		aliasTableModel.clear();
-		String sql = "SELECT id, tag_id, alias FROM tag_aliases WHERE alias LIKE ? ORDER BY alias";
+		String sql = "SELECT id, tag_id, alias_id FROM tag_aliases WHERE alias_id LIKE ? ORDER BY alias_id";
 		try (PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setString(1, "%" + text + "%");
 			try (ResultSet rs = ps.executeQuery()) {
@@ -312,7 +312,7 @@ public class TagManagerApp extends JFrame {
 				// insert aliases if provided
 				String[] as = splitComma(aliases.getText());
 				try (PreparedStatement ps = conn
-						.prepareStatement("INSERT OR IGNORE INTO tag_aliases(tag_id, alias) VALUES(?,?)")) {
+						.prepareStatement("INSERT OR IGNORE INTO tag_aliases(tag_id, alias_id) VALUES(?,?)")) {
 					for (String a : as) {
 						ps.setInt(1, tagId);
 						ps.setString(2, a);
@@ -354,7 +354,7 @@ public class TagManagerApp extends JFrame {
 		List<String> connections = new ArrayList<>();
 		List<String> fileMappings = new ArrayList<>();
 		try {
-			try (PreparedStatement ps = conn.prepareStatement("SELECT alias FROM tag_aliases WHERE tag_id=?")) {
+			try (PreparedStatement ps = conn.prepareStatement("SELECT alias_id FROM tag_aliases WHERE tag_id=?")) {
 				ps.setInt(1, tr.id);
 				ResultSet rs = ps.executeQuery();
 				while (rs.next())
@@ -418,7 +418,8 @@ public class TagManagerApp extends JFrame {
 			int tagId = -1;
 			if (attach != null)
 				tagId = ensureTagExists(attach);
-			try (PreparedStatement ps = conn.prepareStatement("INSERT INTO tag_aliases(tag_id, alias) VALUES(?, ?)")) {
+			try (PreparedStatement ps = conn
+					.prepareStatement("INSERT INTO tag_aliases(tag_id, alias_id) VALUES(?, ?)")) {
 				if (tagId == -1) {
 					// create orphan alias? we will create tag with placeholder name if none
 					// provided.
@@ -663,7 +664,7 @@ public class TagManagerApp extends JFrame {
 			for (String f : files)
 				sb.append("  - ").append(f).append("\n");
 			sb.append("\nAliases:\n");
-			try (PreparedStatement ps = conn.prepareStatement("SELECT alias FROM tag_aliases WHERE tag_id=?")) {
+			try (PreparedStatement ps = conn.prepareStatement("SELECT alias_id FROM tag_aliases WHERE tag_id=?")) {
 				ps.setInt(1, tagId);
 				ResultSet rs = ps.executeQuery();
 				while (rs.next())
