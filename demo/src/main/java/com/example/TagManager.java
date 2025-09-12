@@ -2,7 +2,6 @@ package com.example;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -20,19 +19,18 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
-public class TagManager {
-	JFrame frame = new JFrame();
+public class TagManager extends JPanel {
 	JTextField tagSearchField = new JTextField(20);
 	JList<String> searchedTagsList = new JList<>();
 	String selectedTag = null;
 
 	JTextField aliasSearchField = new JTextField(20);
-	JList<String> searchedAliasesList = new JList<>();
 	JTable aliasTable = new JTable();
 	DefaultTableModel aliasTableModel;
 	String selectedAlias = null;
@@ -40,13 +38,8 @@ public class TagManager {
 	JLabel selectedTagLabel = new JLabel("Tag selected: ");
 	JLabel selectedAliasLabel = new JLabel("Alias selected: ");
 
-	public static void main(String[] args) {
-		TagManager tagManager = new TagManager();
-	}
-
 	TagManager() {
 		try {
-			DbManager dbManager = new DbManager();
 			String tempConnDir = DbManager.tempConnDir;
 			Connection conn = DriverManager.getConnection(tempConnDir);
 		} catch (Exception e) {
@@ -55,6 +48,7 @@ public class TagManager {
 		setUpGUI();
 		updateTagResults();
 		updateAliasResults();
+		updateConnectionResults();
 	}
 
 	void setUpGUI() {
@@ -63,31 +57,30 @@ public class TagManager {
 		JPanel connectionPanel = createConnectionPanel();
 
 		// tagpanel above other 2
-		frame.setLayout(new BorderLayout());
-		frame.add(tagPanel, BorderLayout.NORTH);
+		setLayout(new BorderLayout());
+		add(tagPanel, BorderLayout.NORTH);
 		JPanel lowerPanel = new JPanel(new GridLayout(1, 2));
 		lowerPanel.add(aliasPanel);
 		lowerPanel.add(connectionPanel);
-		frame.add(lowerPanel, BorderLayout.CENTER);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.pack();
-		frame.setSize(700, 500);
-		frame.setVisible(true);
+		add(lowerPanel, BorderLayout.CENTER);
+		// pack();
+		// setSize(700, 500);
+		setVisible(true);
 	}
 
 	JPanel createTagPanel() {
 		JPanel tagPanel = new JPanel(new BorderLayout());
 		tagPanel.setBorder(BorderFactory.createTitledBorder("Tags"));
 
-		JPanel tagSearchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		tagSearchPanel.add(new JLabel("Search tag:"));
-		tagSearchPanel.add(tagSearchField);
+		JPanel tagSearchPanel = new JPanel(new BorderLayout(5, 5));
+		tagSearchPanel.add(new JLabel("Search tag:"), BorderLayout.WEST);
+		tagSearchPanel.add(tagSearchField, BorderLayout.CENTER);
 		tagPanel.add(tagSearchPanel, BorderLayout.NORTH);
 
 		JScrollPane tagScroll = setUpTagScroll();
 		tagPanel.add(tagScroll, BorderLayout.CENTER);
 
-		JPanel tagActions = new JPanel(new FlowLayout(FlowLayout.CENTER));
+		JPanel tagActions = new JPanel();
 		tagActions.add(selectedTagLabel);
 
 		// Dynamically update label when selectedTag changes
@@ -118,14 +111,14 @@ public class TagManager {
 			if (!isValidName(newTag))
 				return;
 			// confirm dialog
-			int confirm = JOptionPane.showConfirmDialog(frame, "Create new tag: " + newTag + "?",
-					"Confirm Tag Creation", JOptionPane.YES_NO_OPTION);
+			int confirm = JOptionPane.showConfirmDialog(this, "Create new tag: " + newTag + "?", "Confirm Tag Creation",
+					JOptionPane.YES_NO_OPTION);
 			if (confirm == JOptionPane.YES_OPTION) {
 				if (DbManager.createTag(newTag) == 1) {
-					JOptionPane.showMessageDialog(frame, "Tag created: " + newTag);
+					JOptionPane.showMessageDialog(this, "Tag created: " + newTag);
 					updateTagResults();
 				} else {
-					JOptionPane.showMessageDialog(frame, "Tag already exists: " + newTag);
+					JOptionPane.showMessageDialog(this, "Tag already exists: " + newTag);
 				}
 			}
 		});
@@ -133,19 +126,19 @@ public class TagManager {
 		JButton deleteTagBtn = new JButton("Delete selected tag");
 		deleteTagBtn.addActionListener(e -> {
 			if (selectedTag == null) {
-				JOptionPane.showMessageDialog(frame, "No tag selected to delete.");
+				JOptionPane.showMessageDialog(this, "No tag selected to delete.");
 				return;
 			}
 			// confirm dialog
-			int confirm = JOptionPane.showConfirmDialog(frame, "Delete tag: " + selectedTag + "?",
+			int confirm = JOptionPane.showConfirmDialog(this, "Delete tag: " + selectedTag + "?",
 					"Confirm Tag Deletion", JOptionPane.YES_NO_OPTION);
 			if (confirm == JOptionPane.YES_OPTION) {
 				if (DbManager.deleteTag(selectedTag) == 1) {
-					JOptionPane.showMessageDialog(frame, "Tag deleted: " + selectedTag);
+					JOptionPane.showMessageDialog(this, "Tag deleted: " + selectedTag);
 					setSelectedTag(null);
 					updateTagResults();
 				} else {
-					JOptionPane.showMessageDialog(frame, "Error deleting tag: " + selectedTag);
+					JOptionPane.showMessageDialog(this, "Error deleting tag: " + selectedTag);
 				}
 			}
 		});
@@ -159,23 +152,6 @@ public class TagManager {
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		scrollPane.setViewportView(searchedTagsList);
 		searchedTagsList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-		/*
-		 * searchedTagsList.addMouseListener(new MouseAdapter() {
-		 *
-		 * @Override public void mouseClicked(MouseEvent e) { selectedTag =
-		 * searchedTagsList.getSelectedValue(); System.out.println("Selected tag: " +
-		 * selectedTag); } });
-		 */
-		/*
-		 * searchedTagsList.addMouseListener(new MouseAdapter() {
-		 *
-		 * @Override public void mouseClicked(MouseEvent e) { if (e.getClickCount() >=
-		 * 2) { if (tabbedPane.getSelectedIndex() == 0) { changeJList(appliedTagsList,
-		 * searchedTagsList.getSelectedValue(), 1); } else {
-		 * DbManager.addTagToFiles(ListingPanel.selectedFiles,
-		 * searchedTagsList.getSelectedValue()); updateFileTags(); // add tag to
-		 * selected files } updateResults(); } } });
-		 */
 		tagSearchField.getDocument().addDocumentListener(new DocumentListener() {
 			@Override
 			public void insertUpdate(DocumentEvent e) {
@@ -203,14 +179,14 @@ public class TagManager {
 		}
 
 		searchedTagsList.setListData(foundTags.toArray(new String[0]));
-		CleanFrame(frame);
+		// CleanFrame(this);
 	}
 
 	JPanel createAliasPanel() {
 		JPanel aliasPanel = new JPanel(new BorderLayout());
 		aliasPanel.setBorder(BorderFactory.createTitledBorder("Aliases"));
 
-		aliasTableModel = new DefaultTableModel(new Object[] { "Selected", "Alias" }, 0) {
+		aliasTableModel = new DefaultTableModel(new Object[] { "Applied", "Alias" }, 0) {
 			@Override
 			public Class<?> getColumnClass(int c) {
 				return c == 0 ? Boolean.class : String.class;
@@ -225,6 +201,7 @@ public class TagManager {
 		aliasTable.setModel(aliasTableModel);
 		aliasTable.setRowHeight(24);
 		aliasTable.putClientProperty("terminateEditOnFocusLost", true); // commit edits reliably
+		aliasTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
 
 		aliasTableModel.addTableModelListener(e -> {
 			// Only respond to checkbox column changes
@@ -241,17 +218,17 @@ public class TagManager {
 			if (selectedTag == null) {
 				// revert without recursion: use invokeLater to defer
 				SwingUtilities.invokeLater(() -> aliasTableModel.setValueAt(!checked, row, 0));
-				JOptionPane.showMessageDialog(frame, "No tag selected to add/remove alias to/from.");
+				JOptionPane.showMessageDialog(this, "No tag selected to add/remove alias to/from.");
 				return;
 			}
 
 			// Perform DB updates
 			if (checked) {
 				DbManager.addAliasToTag(selectedTag, alias);
-				System.out.println("Added alias: " + alias + " to tag: " + selectedTag);
+				// System.out.println("Added alias: " + alias + " to tag: " + selectedTag);
 			} else {
 				DbManager.removeAliasFromTag(selectedTag, alias);
-				System.out.println("Removed alias: " + alias + " from tag: " + selectedTag);
+				// System.out.println("Removed alias: " + alias + " from tag: " + selectedTag);
 			}
 		});
 
@@ -259,21 +236,22 @@ public class TagManager {
 			if (!e.getValueIsAdjusting() && aliasTable.getSelectedRow() >= 0) {
 				String alias = (String) aliasTable.getValueAt(aliasTable.getSelectedRow(), 1);
 				setSelectedAlias(alias);
-				System.out.println("Selected alias: " + alias);
+				// System.out.println("Selected alias: " + alias);
 			}
 		});
 
 		aliasPanel.add(new JScrollPane(aliasTable), BorderLayout.CENTER);
 
-		JPanel aliasSearchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		aliasSearchPanel.add(new JLabel("Search alias:"));
-		aliasSearchPanel.add(aliasSearchField);
+		JPanel aliasSearchPanel = new JPanel(new BorderLayout(5, 5));
+		aliasSearchPanel.add(new JLabel("Search alias:"), BorderLayout.WEST);
+		aliasSearchPanel.add(aliasSearchField, BorderLayout.CENTER);
+
 		aliasPanel.add(aliasSearchPanel, BorderLayout.NORTH);
 
 		JScrollPane aliasScroll = setUpAliasScroll();
 		aliasPanel.add(aliasScroll, BorderLayout.CENTER);
 
-		JPanel aliasActions = new JPanel(new FlowLayout(FlowLayout.CENTER));
+		JPanel aliasActions = new JPanel();
 		// let panel components resize to fit space
 		aliasActions.setLayout(new GridLayout(0, 1));
 		aliasActions.add(selectedAliasLabel);
@@ -283,14 +261,14 @@ public class TagManager {
 			if (!isValidName(newAlias))
 				return;
 			// confirm dialog
-			int confirm = JOptionPane.showConfirmDialog(frame, "Create new alias: " + newAlias,
-					"Confirm alias creation", JOptionPane.YES_NO_OPTION);
+			int confirm = JOptionPane.showConfirmDialog(this, "Create new alias: " + newAlias, "Confirm alias creation",
+					JOptionPane.YES_NO_OPTION);
 			if (confirm == JOptionPane.YES_OPTION) {
 				if (DbManager.createAlias(newAlias) == 1) {
-					JOptionPane.showMessageDialog(frame, "Alias created: " + newAlias);
+					JOptionPane.showMessageDialog(this, "Alias created: " + newAlias);
 					updateAliasResults();
 				} else {
-					JOptionPane.showMessageDialog(frame, "Alias already exists: " + newAlias);
+					JOptionPane.showMessageDialog(this, "Alias already exists: " + newAlias);
 				}
 			}
 		});
@@ -298,19 +276,19 @@ public class TagManager {
 		JButton deleteAliasBtn = new JButton("Delete selected alias");
 		deleteAliasBtn.addActionListener(e -> {
 			if (selectedAlias == null) {
-				JOptionPane.showMessageDialog(frame, "No alias selected to delete.");
+				JOptionPane.showMessageDialog(this, "No alias selected to delete.");
 				return;
 			}
 			// confirm dialog
-			int confirm = JOptionPane.showConfirmDialog(frame, "Delete alias: " + selectedAlias + "?",
+			int confirm = JOptionPane.showConfirmDialog(this, "Delete alias: " + selectedAlias + "?",
 					"Confirm Alias Deletion", JOptionPane.YES_NO_OPTION);
 			if (confirm == JOptionPane.YES_OPTION) {
 				if (DbManager.deleteAlias(selectedAlias) == 1) {
-					JOptionPane.showMessageDialog(frame, "Alias deleted: " + selectedAlias);
+					JOptionPane.showMessageDialog(this, "Alias deleted: " + selectedAlias);
 					setSelectedAlias(null);
 					updateAliasResults();
 				} else {
-					JOptionPane.showMessageDialog(frame, "Error deleting alias: " + selectedAlias);
+					JOptionPane.showMessageDialog(this, "Error deleting alias: " + selectedAlias);
 				}
 			}
 		});
@@ -348,12 +326,6 @@ public class TagManager {
 		String search = aliasSearchField.getText();
 		Map<String, Boolean> aliasesMap = DbManager.findAliases(selectedTag, search);
 
-		if (selectedTag == null) {
-			// optional: clear table if no tag
-			// aliasModel.setRowCount(0);
-			// CleanFrame(frame);
-			// return;
-		}
 		if (aliasesMap == null)
 			aliasesMap = java.util.Collections.emptyMap();
 
@@ -362,48 +334,160 @@ public class TagManager {
 		for (Map.Entry<String, Boolean> entry : aliasesMap.entrySet()) {
 			aliasTableModel.addRow(new Object[] { entry.getValue(), entry.getKey() });
 		}
-		CleanFrame(frame);
+
+		// rows with true boolean first
+		aliasTableModel.getDataVector().sort((a, b) -> {
+			Boolean aChecked = (Boolean) ((java.util.Vector<?>) a).get(0);
+			Boolean bChecked = (Boolean) ((java.util.Vector<?>) b).get(0);
+			return bChecked.compareTo(aChecked); // true first
+		});
+		// CleanFrame(frame);
 	}
+
+	// fields you need in your class
+	private JTable connTable = new JTable();
+	private DefaultTableModel connTableModel;
+	private JTextField connSearchField = new JTextField(15);
+	private JLabel selectedConnLabel = new JLabel("Connection selected: ");
+	private String selectedConn = null;
 
 	JPanel createConnectionPanel() {
 		JPanel connPanel = new JPanel(new BorderLayout());
 		connPanel.setBorder(BorderFactory.createTitledBorder("Connections"));
 
-		JPanel connSearch = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		connSearch.add(new JLabel("Search connection:"));
-		connSearch.add(new JTextField(15));
-		connPanel.add(connSearch, BorderLayout.NORTH);
+		// table model
+		connTableModel = new DefaultTableModel(new Object[] { "Applied", "Connection" }, 0) {
+			@Override
+			public Class<?> getColumnClass(int c) {
+				return c == 0 ? Boolean.class : String.class;
+			}
 
-		JTable connTable = makeCheckboxTable(new String[] { "Conn1", "Conn2", "Conn3" });
-		connPanel.add(new JScrollPane(connTable), BorderLayout.CENTER);
+			@Override
+			public boolean isCellEditable(int r, int c) {
+				// checkboxes only editable if a tag is selected
+				return c == 0 && selectedTag != null;
+			}
+		};
+
+		// table setup
+		connTable.setModel(connTableModel);
+		connTable.setRowHeight(24);
+		connTable.putClientProperty("terminateEditOnFocusLost", true);
+		connTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+		// listen for checkbox toggles
+		connTableModel.addTableModelListener(e -> {
+			if (e.getColumn() != 0 || e.getFirstRow() < 0)
+				return;
+
+			int row = e.getFirstRow();
+			Boolean checked = (Boolean) connTableModel.getValueAt(row, 0);
+			String conn = (String) connTableModel.getValueAt(row, 1);
+
+			setSelectedConn(conn);
+
+			if (selectedTag == null) {
+				// just ignore if no tag selected (checkbox editing disabled anyway)
+				return;
+			}
+
+			if (checked) {
+				DbManager.addConnToTag(selectedTag, conn);
+				// System.out.println("Added connection: " + conn + " to tag: " + selectedTag);
+			} else {
+				DbManager.removeConnFromTag(selectedTag, conn);
+				// System.out.println("Removed connection: " + conn + " from tag: " +
+				// selectedTag);
+			}
+		});
+
+		// listen for row selection (column 1 clicks)
+		connTable.getSelectionModel().addListSelectionListener(e -> {
+			if (!e.getValueIsAdjusting() && connTable.getSelectedRow() >= 0) {
+				String conn = (String) connTable.getValueAt(connTable.getSelectedRow(), 1);
+				setSelectedConn(conn);
+				// System.out.println("Selected connection: " + conn);
+			}
+		});
+
+		// search bar
+		JPanel connSearchPanel = new JPanel(new BorderLayout(5, 5));
+		connSearchPanel.add(new JLabel("Search connection:"), BorderLayout.WEST);
+		connSearchPanel.add(connSearchField, BorderLayout.CENTER);
+		connPanel.add(connSearchPanel, BorderLayout.NORTH);
+
+		// table scroll
+		JScrollPane connScroll = setUpConnectionScroll();
+		connPanel.add(connScroll, BorderLayout.CENTER);
+
+		// bottom actions / status
+		JPanel connActions = new JPanel(new BorderLayout(5, 5));
+		connActions.add(selectedConnLabel);
+		connPanel.add(connActions, BorderLayout.SOUTH);
+
 		return connPanel;
 	}
 
-	private JTable makeCheckboxTable(String[] items) {
-		// TODO : scrap
-		DefaultTableModel model = new DefaultTableModel(new Object[] { "", "Alias" }, 0) {
+	JScrollPane setUpConnectionScroll() {
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		scrollPane.setViewportView(connTable);
+
+		connSearchField.getDocument().addDocumentListener(new DocumentListener() {
 			@Override
-			public Class<?> getColumnClass(int columnIndex) {
-				return columnIndex == 0 ? Boolean.class : String.class;
+			public void insertUpdate(DocumentEvent e) {
+				updateConnectionResults();
 			}
 
 			@Override
-			public boolean isCellEditable(int row, int col) {
-				return col == 0 && selectedTag != null;
+			public void removeUpdate(DocumentEvent e) {
+				updateConnectionResults();
 			}
-		};
-		for (String item : items) {
-			model.addRow(new Object[] { false, item });
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				updateConnectionResults();
+			}
+		});
+
+		return scrollPane;
+	}
+
+	void updateConnectionResults() {
+		// System.out.println("Updating connection results for tag: " + selectedTag);
+		String search = connSearchField.getText();
+		Map<String, Boolean> connsMap = DbManager.findConnections(selectedTag, search);
+
+		if (connsMap == null)
+			connsMap = java.util.Collections.emptyMap();
+
+		// clear + repopulate rows
+		connTableModel.setRowCount(0);
+		for (Map.Entry<String, Boolean> entry : connsMap.entrySet()) {
+			connTableModel.addRow(new Object[] { entry.getValue(), entry.getKey() });
 		}
-		JTable table = new JTable(model);
-		table.setRowHeight(25);
-		return table;
+
+		// rows with true boolean first
+		connTableModel.getDataVector().sort((a, b) -> {
+			Boolean aChecked = (Boolean) ((java.util.Vector<?>) a).get(0);
+			Boolean bChecked = (Boolean) ((java.util.Vector<?>) b).get(0);
+			return bChecked.compareTo(aChecked); // true first
+		});
+
+		// CleanFrame(frame);
+	}
+
+	// helper
+	private void setSelectedConn(String conn) {
+		this.selectedConn = conn;
+		selectedConnLabel.setText("Connection selected: " + (conn != null ? conn : ""));
 	}
 
 	void setSelectedTag(String selectedTag) {
 		this.selectedTag = selectedTag;
 		selectedTagLabel.setText("Tag selected: " + selectedTag);
 		updateAliasResults();
+		updateConnectionResults();
 
 	}
 
@@ -413,15 +497,15 @@ public class TagManager {
 	}
 
 	static void CleanFrame(JFrame frame) {
-		// frame.getContentPane().removeAll();
-		frame.repaint();
-		frame.revalidate();
+		// getContentPane().removeAll();
+		// repaint();
+		// revalidate();
 		// System.out.println("Cleaned frame");
 	}
 
 	boolean isValidName(String name) {
 		if (name.isEmpty()) {
-			JOptionPane.showMessageDialog(frame, "Name can not be empty");
+			JOptionPane.showMessageDialog(this, "Name can not be empty");
 			return false;
 		}
 		return true;

@@ -393,7 +393,7 @@ public class DbManager {
 
 	public static int createTagAlias(String tag, String alias) {
 		try {
-			String insertSubTagSQL = "INSERT INTO tag_aliases (tag_id, alias) VALUES ((SELECT id FROM tags WHERE tag = ?), ?);";
+			String insertSubTagSQL = "INSERT INTO tag_aliases (tag_id, alias_id) VALUES ((SELECT id FROM tags WHERE tag = ?), (SELECT id FROM aliases WHERE alias = ?));";
 			PreparedStatement stmt = conn.prepareStatement(insertSubTagSQL);
 			stmt.setString(1, tag);
 			stmt.setString(2, alias);
@@ -476,6 +476,31 @@ public class DbManager {
 		return aliasesMap;
 	}
 
+	public static Map<String, Boolean> findConnections(String tag, String search) {
+		Map<String, Boolean> connsMap = new LinkedHashMap<>();
+		// return all tags.tag
+		// if search like aliases.alias, also return tags.tag that has it's tag_id and
+		// tag_aliases.alias_id
+		// for all results, if String tag's tag_id is in tag_connections, make
+		// appropriate returned connections have a true boolean
+		try {
+			String selectSQL = "SELECT t.tag FROM tags t LEFT JOIN tag_aliases ta ON t.id = ta.tag_id LEFT JOIN aliases a ON ta.alias_id = a.id WHERE t.tag LIKE ? OR a.alias LIKE ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, "%" + search + "%");
+			stmt.setString(2, "%" + search + "%");
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				String connTag = rs.getString("tag");
+				boolean hasConn = tagHasConn(tag, connTag);
+				connsMap.put(connTag, hasConn);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return connsMap;
+	}
+
 	public static boolean tagHasAlias(String tag, String alias) {
 		boolean result = false;
 		// if in tag_aliases tag_id has alias_id
@@ -493,6 +518,49 @@ public class DbManager {
 		}
 
 		return result;
+	}
+
+	public static boolean tagHasConn(String tag, String connTag) {
+		boolean result = false;
+		// if in tag_connections tag_id has connection_id
+		try {
+			String selectSQL = "SELECT COUNT(*) FROM tag_connections WHERE tag_id = (SELECT id FROM tags WHERE tag = ?) AND connection_tag_id = (SELECT id FROM tags WHERE tag = ?);";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, connTag);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				result = rs.getInt(1) > 0;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
+	public static void addConnToTag(String tag, String connection) {
+		try {
+			String insertSQL = "INSERT INTO tag_connections (tag_id, connection_tag_id) VALUES ((SELECT id FROM tags WHERE tag = ?), (SELECT id FROM tags WHERE tag = ?));";
+			PreparedStatement stmt = conn.prepareStatement(insertSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, connection);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void removeConnFromTag(String tag, String connection) {
+		try {
+			String deleteSQL = "DELETE FROM tag_connections WHERE tag_id = (SELECT id FROM tags WHERE tag = ?) AND connection_tag_id = (SELECT id FROM tags WHERE tag = ?);";
+			PreparedStatement stmt = conn.prepareStatement(deleteSQL);
+			stmt.setString(1, tag);
+			stmt.setString(2, connection);
+			stmt.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static int createAlias(String alias) {

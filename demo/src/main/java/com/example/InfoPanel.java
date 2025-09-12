@@ -40,10 +40,12 @@ public class InfoPanel extends JPanel {
 
 	static List<FilePanel> activeFiles = new ArrayList<>();
 	static boolean isDetailView = false;
+	public GUI gui;
 
 	public InfoPanel() {
 		// pref size
 		// setPreferredSize(new java.awt.Dimension(300, 600));
+
 		SetUpPanels();
 
 	}
@@ -98,26 +100,7 @@ public class InfoPanel extends JPanel {
 			updateResults();
 			updateSearchTags();
 		});
-		JButton detailToggleButton = new JButton("Detail view");
-		detailToggleButton.addActionListener(e -> {
-			// get all panels from filePanel
-			List<FilePanel> activeFiles = listingPanel.activeFilePanels;
-			System.out.println("Toggling detail view for " + activeFiles.size() + " files");
 
-			isDetailView = !isDetailView;
-			for (FilePanel filePanel : activeFiles) {
-				if (isDetailView)
-					filePanel.showDetailView();
-				else
-					filePanel.showImageView();
-			}
-
-			if (isDetailView) {
-				detailToggleButton.setText("Image view");
-			} else {
-				detailToggleButton.setText("Detail view");
-			}
-		});
 		// c.fill = GridBagConstraints.HORIZONTAL;
 		// c.weighty = 2;
 		c.fill = GridBagConstraints.BOTH;
@@ -129,8 +112,6 @@ public class InfoPanel extends JPanel {
 		c.gridwidth = 1;
 		c.weightx = .5;
 		panel.add(switchDirButton, c);
-		c.gridx = 1;
-		panel.add(detailToggleButton, c);
 
 		return panel;
 	}
@@ -210,39 +191,48 @@ public class InfoPanel extends JPanel {
 		return scrollPane;
 	}
 
+	boolean isManagingTags = false;
+
 	private JPanel SetUpControlPanel() {
 		// control//
 		JPanel controlPanel = new JPanel();
-		controlPanel.setLayout(new GridLayout(1, 3));
-		JButton createTagButton = new JButton("Create new tag");
-		createTagButton.addActionListener(e -> {
-			createTagGUI();
-		});
-		JButton editTagButton = new JButton("Edit tag");
-		editTagButton.addActionListener(e -> {
-			if (searchedTagsList.getSelectedValue() == null) {
-				JOptionPane.showMessageDialog(this, "No tag selected", "Error", JOptionPane.ERROR_MESSAGE);
-				return;
-			}
-			// edit tag
-		});
-		JButton deleteTagButton = new JButton("Delete tag");
-		deleteTagButton.addActionListener(e -> {
-			if (searchedTagsList.getSelectedValue() == null) {
-				JOptionPane.showMessageDialog(this, "No tag selected", "Error", JOptionPane.ERROR_MESSAGE);
-				return;
-			}
-			// confirm dialog
-			int response = JOptionPane.showConfirmDialog(this,
-					"Are you sure you want to delete tag: " + searchedTagsList.getSelectedValue() + "?",
-					"Confirm Delete tag " + searchedTagsList.getSelectedValue(), JOptionPane.YES_NO_OPTION);
-			if (response == JOptionPane.YES_OPTION) {
-				DbManager.deleteTag(searchedTagsList.getSelectedValue());
+		controlPanel.setLayout(new GridLayout(1, 2));
+		JButton manageTagsButton = new JButton("Manage tags");
+		manageTagsButton.addActionListener(e -> {
+			isManagingTags = !isManagingTags;
+			if (isManagingTags) {
+				manageTagsButton.setText("View files");
+				gui.ChangeRightView(1);
+			} else {
+				manageTagsButton.setText("Manage tags");
+				gui.ChangeRightView(0);
 			}
 		});
-		controlPanel.add(createTagButton);
-		controlPanel.add(editTagButton);
-		controlPanel.add(deleteTagButton);
+
+		JButton detailToggleButton = new JButton("Detail view");
+		detailToggleButton.addActionListener(e -> {
+			// get all panels from filePanel
+			List<FilePanel> activeFiles = listingPanel.activeFilePanels;
+			// System.out.println("Toggling detail view for " + activeFiles.size() + "
+			// files");
+
+			isDetailView = !isDetailView;
+			for (FilePanel filePanel : activeFiles) {
+				if (isDetailView)
+					filePanel.showDetailView();
+				else
+					filePanel.showImageView();
+			}
+
+			if (isDetailView) {
+				detailToggleButton.setText("Image view");
+			} else {
+				detailToggleButton.setText("Detail view");
+			}
+		});
+
+		controlPanel.add(manageTagsButton);
+		controlPanel.add(detailToggleButton);
 		return controlPanel;
 	}
 

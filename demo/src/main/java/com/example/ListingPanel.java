@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -40,8 +39,6 @@ public class ListingPanel extends JPanel {
 	public static List<FileItem> selectedFiles = new ArrayList<>();
 
 	public ListingPanel() {
-		// setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, InfoPanel.gray));
-		setBorder(BorderFactory.createMatteBorder(0, 5, 0, 0, InfoPanel.gray));
 
 		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		panelWidth = preferences.getInt("panelWidth", 40);
