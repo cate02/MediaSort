@@ -146,8 +146,8 @@ public class InfoPanel extends JPanel {
 			}
 		});
 		// jtabbedpane holding apply and file panes
-		tabbedPane.addTab("Applied Tags", appliedTagsPane);
-		tabbedPane.addTab("File Tags", fileTagsPane);
+		tabbedPane.addTab("Searching for tags", appliedTagsPane);
+		tabbedPane.addTab("Selected files tags", fileTagsPane);
 	}
 
 	private JScrollPane SetUpSearch() {

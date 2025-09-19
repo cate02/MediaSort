@@ -4,12 +4,12 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -18,6 +18,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.UIManager;
 
 // import org.w3c.dom.events.MouseEvent; // Removed incorrect import
@@ -104,10 +105,13 @@ public class FilePanel extends JPanel {
 		// hover tags shows connected tags?
 		// use jtree?
 		JPanel panel = new JPanel();
-		List<String> list = fileItem.list;
-		JList<String> tagsList = new JList<>(list.toArray(new String[0]));
-		panel.add(tagsList);
-
+		JList<String> tagsList = new JList<>(fileItem.tagsList.toArray(new String[0]));
+		JScrollPane scrollPane = new JScrollPane(tagsList);
+		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		// to make it take as much space
+		panel.setLayout(new GridLayout());
+		panel.add(scrollPane);
 		return panel;
 	}
 

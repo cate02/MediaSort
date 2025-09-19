@@ -10,7 +10,7 @@ public class FileItem {
 	public final String name;
 	public final int id;
 	public boolean isSelected;
-	public List<String> list;
+	public List<String> tagsList;
 
 	public FileItem(File file, String path, String name, int id, boolean isSelected) throws IOException {
 		this.file = file;
@@ -19,9 +19,5 @@ public class FileItem {
 		this.id = id;
 		this.isSelected = isSelected;
 		// FilePanel filePanel = new FilePanel(this);
-	}
-
-	public void addTagsList(List<String> tags) {
-		list = tags;
 	}
 }

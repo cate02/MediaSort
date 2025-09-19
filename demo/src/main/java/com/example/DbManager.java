@@ -31,10 +31,12 @@ public class DbManager {
 	static String contentPath;
 	private static Preferences preferences;
 	static String tempConnDir;
+	public static TagManager tagManager;
 
 	DbManager() {
 		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		getContentPath();
+		System.out.println(dbPath + "\n" + contentPath);
 	}
 
 	static void createDatabase() {
@@ -148,6 +150,7 @@ public class DbManager {
 			JOptionPane.showMessageDialog(null, "No directory selected.", "Error", JOptionPane.ERROR_MESSAGE);
 			// System.exit(0);
 		}
+		tagManager.refreshTagManager();
 	}
 
 	private static void processDirectory(String directoryPath) {
@@ -267,7 +270,7 @@ public class DbManager {
 				String name = file.getName();
 				int id = rs.getInt("id");
 				FileItem temp = new FileItem(file, path, name, id, false);
-				temp.addTagsList(findTags(temp));
+				temp.tagsList = findTags(temp);
 				fileItems.add(temp);
 				i++;
 			}
@@ -301,13 +304,61 @@ public class DbManager {
 				String name = file.getName();
 				int id = rs.getInt("id");
 				FileItem temp = new FileItem(file, path, name, id, false);
-				temp.addTagsList(findTags(temp));
+				temp.tagsList = findTags(temp);
 				files.add(temp);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return files;
+	}
+
+	public static int findAliasId(String alias) {
+		int id = 0;
+		try {
+			String selectSQL = "SELECT id FROM aliases WHERE alias = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, alias);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				id = rs.getInt("id");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return id;
+	}
+
+	public static int findTagId(String tag) {
+		int id = 0;
+		try {
+			String selectSQL = "SELECT id FROM tags WHERE tag = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, tag);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				id = rs.getInt("id");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return id;
+	}
+
+	public static int findConnectionId(String connection) {
+		int id = 0;
+		try {
+			String selectSQL = "SELECT id FROM tags WHERE tag = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, connection);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				id = rs.getInt("id");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return id;
 	}
 
 	public static List<String> findTags(FileItem file) {
@@ -319,21 +370,21 @@ public class DbManager {
 
 	public static List<String> findTags(List<FileItem> files) {
 		List<String> tags = new ArrayList<>();
+		// find all tags for list of files, include any duplicate tags into the list
 		try {
 			StringBuilder query = new StringBuilder(
-					"SELECT DISTINCT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id WHERE ft.file_id IN (");
+					"SELECT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id INNER JOIN files f ON ft.file_id = f.id WHERE f.id IN (");
 			for (int i = 0; i < files.size(); i++) {
 				query.append("?");
 				if (i < files.size() - 1) {
 					query.append(", ");
 				}
 			}
-			query.append(") GROUP BY t.id HAVING COUNT(DISTINCT ft.file_id) = ?;");
+			query.append(");");
 			PreparedStatement stmt = conn.prepareStatement(query.toString());
 			for (int i = 0; i < files.size(); i++) {
 				stmt.setInt(i + 1, files.get(i).id);
 			}
-			stmt.setInt(files.size() + 1, files.size());
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				tags.add(rs.getString("tag"));
@@ -374,8 +425,8 @@ public class DbManager {
 	}
 
 	public static int createTag(String tag) {
-		if (doesTagExist(tag))
-			return 0;
+		if (doesTagExist(tag) || doesAliasExist(tag))
+			System.err.println("how was this called");
 		try {
 			String insertSubTagSQL = "INSERT INTO tags (tag) VALUES (?);";
 			PreparedStatement stmt = conn.prepareStatement(insertSubTagSQL);
@@ -439,6 +490,43 @@ public class DbManager {
 		} else {
 			return 1;
 		}
+	}
+
+	public static List<String> getTagsForAlias(String alias) {
+		List<String> tags = new ArrayList<>();
+		try {
+			String selectSQL = "SELECT t.tag FROM tags t INNER JOIN tag_aliases ta ON t.id = ta.tag_id INNER JOIN aliases a ON ta.alias_id = a.id WHERE a.alias = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, alias);
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				tags.add(rs.getString("tag"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tags;
+	}
+
+	public static List<String> getFilesForTag(String tag) {
+		List<String> files = new ArrayList<>();
+		try {
+			String selectSQL = "SELECT f.path FROM files f INNER JOIN file_tags ft ON f.id = ft.file_id INNER JOIN tags t ON ft.tag_id = t.id WHERE t.tag = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, tag);
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				// exclude dbpath section from path
+				String path = rs.getString("path");
+				if (path.contains(contentPath)) {
+					path = path.substring(path.indexOf(contentPath) + contentPath.length());
+				}
+				files.add(path);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return files;
 	}
 
 	public static void deleteTagFromFiles(String tag, List<FileItem> files) {
@@ -563,9 +651,13 @@ public class DbManager {
 		}
 	}
 
+	public static boolean isUniqueTagAlias(String text) {
+		return !doesTagExist(text) && !doesAliasExist(text);
+	}
+
 	public static int createAlias(String alias) {
-		if (doesAliasExist(alias))
-			return 0;
+		if (doesAliasExist(alias) || doesTagExist(alias))
+			System.err.println("how was this called");
 		try {
 			String insertAliasSQL = "INSERT INTO aliases (alias) VALUES (?);";
 			PreparedStatement stmt = conn.prepareStatement(insertAliasSQL);
