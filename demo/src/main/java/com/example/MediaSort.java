@@ -7,8 +7,8 @@ public class MediaSort {
 		DbManager dbManager = new DbManager();
 		GUI gui = new GUI();
 		InfoPanel.updateSearchTags();
-		ListingPanel.updateImageScales();
-		ListingPanel.layoutPanels();
+		// ListingPanel.updateImageScales();
+		// ListingPanel.layoutPanels();
 		gui.frame.setVisible(true);
 	}
 }

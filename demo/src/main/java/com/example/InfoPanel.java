@@ -252,7 +252,7 @@ public class InfoPanel extends JPanel {
 		List<String> tags = new ArrayList<>();
 		foundTags = DbManager.findTags(ListingPanel.selectedFiles);
 		fileTagsList.setListData(foundTags.toArray(new String[0]));
-		System.out.println(foundTags.toArray(new String[0]));
+		// System.out.println(foundTags.toArray(new String[0]));
 	}
 
 	private static void updateResults() {
@@ -280,7 +280,7 @@ public class InfoPanel extends JPanel {
 			FileItem old = previouslySelectedById.get(fileItem.id);
 			if (old != null) {
 				fileItem.isSelected = old.isSelected;
-				ListingPanel.selectedFiles.add(fileItem);
+				ListingPanel.changeSelectedFiles(fileItem, 1);
 			}
 
 			FilePanel tempFilePanel = new FilePanel(fileItem);

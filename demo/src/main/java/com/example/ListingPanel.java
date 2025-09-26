@@ -8,6 +8,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -21,6 +23,7 @@ import javax.swing.JSlider;
 import javax.swing.ScrollPaneConstants;
 
 public class ListingPanel extends JPanel {
+	private boolean mouseDown = false;
 	private boolean debugListing = false;
 	static Color black = new Color(0, 0, 0);
 
@@ -92,6 +95,7 @@ public class ListingPanel extends JPanel {
 	public void addPanel(JPanel panel) {
 		activeFilePanels.add((FilePanel) panel);
 		panel.setSize(panelWidth, panelHeight);
+		addSelectionListeners((FilePanel) panel);
 		contentPanel.add(panel);
 		layoutPanels();
 		// updateImageScales();
@@ -244,17 +248,10 @@ public class ListingPanel extends JPanel {
 
 	static void changeSelectedFiles(FileItem fileItem, int action) {
 		fileItem.isSelected = action == 1;
-
-		if (fileItem != null) {
-			if (action == 1) {
-				selectedFiles.add(fileItem);
-			} else if (action == -1) {
-				selectedFiles.remove(fileItem);
-			}
-		} else {
-			if (action == -1) {
-				selectedFiles.clear();
-			}
+		if (action == 1) {
+			selectedFiles.add(fileItem);
+		} else if (action == -1) {
+			selectedFiles.remove(fileItem);
 		}
 
 		if (selectedFiles.size() <= 0) {
@@ -267,4 +264,27 @@ public class ListingPanel extends JPanel {
 		System.out.println("Selected items: " + selectedFiles.size());
 		InfoPanel.updateFileTags();
 	}
+
+	private void addSelectionListeners(FilePanel filePanel) {
+		filePanel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				mouseDown = true;
+				filePanel.setSelected(!filePanel.fileItem.isSelected);
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				mouseDown = false;
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				if (mouseDown) {
+					filePanel.setSelected(!filePanel.fileItem.isSelected);
+				}
+			}
+		});
+	}
+
 }

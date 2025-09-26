@@ -4,27 +4,30 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 
 // import org.w3c.dom.events.MouseEvent; // Removed incorrect import
 
 public class FilePanel extends JPanel {
-	private FileItem fileItem;
+	public FileItem fileItem;
 	private Color gray = new Color(128, 128, 128);
 	private CardLayout cardLayout = new CardLayout();
 	private JPanel cards = new JPanel(cardLayout);
@@ -34,6 +37,13 @@ public class FilePanel extends JPanel {
 
 	private int borderSize = 3;
 
+	public void setSelected(boolean state) {
+		fileItem.isSelected = state;
+		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize,
+				fileItem.isSelected ? Color.green : gray));
+		ListingPanel.changeSelectedFiles(fileItem, state ? 1 : -1);
+	}
+
 	public FilePanel(FileItem fileItem) {
 
 		this.fileItem = fileItem;
@@ -41,22 +51,10 @@ public class FilePanel extends JPanel {
 		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize,
 				fileItem.isSelected ? Color.green : gray));
 
-		JCheckBox checkBox = new JCheckBox();
-		checkBox.setSelected(fileItem.isSelected);
-		checkBox.addActionListener(e -> {
-			if (checkBox.isSelected()) {
-				ListingPanel.changeSelectedFiles(fileItem, 1);
-				setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, Color.GREEN));
-			} else {
-				ListingPanel.changeSelectedFiles(fileItem, -1);
-				setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, gray));
-			}
-		});
 		JLabel nameLabel = new JLabel(fileItem.name);
 		namePanel = new JPanel();
 		namePanel.setLayout(new BorderLayout());
 		namePanel.add(nameLabel, BorderLayout.CENTER);
-		namePanel.add(checkBox, BorderLayout.EAST);
 		add(namePanel, BorderLayout.SOUTH);
 
 		JPanel imageView = createImageView();
@@ -68,18 +66,53 @@ public class FilePanel extends JPanel {
 	}
 
 	private JPanel createImageView() {
-		JPanel panel = new JPanel();
+		JPanel panel = new JPanel(new BorderLayout());
 		imgLabel.setHorizontalAlignment(JLabel.CENTER);
 		imgLabel.setVerticalAlignment(JLabel.CENTER);
 		panel.add(imgLabel, BorderLayout.CENTER);
 
 		if (isImageFile(fileItem.file)) {
-			try {
-				image = ImageIO.read(fileItem.file);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			drawImage();
+			// show placeholder immediately
+			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon")); // or custom "loading" icon
+
+			// Load in background
+			SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
+				@Override
+				protected ImageIcon doInBackground() throws Exception {
+					BufferedImage img = ImageIO.read(fileItem.file);
+					if (img == null)
+						return null;
+
+					// scale it for the panel
+					int panelWidth = ListingPanel.panelWidth;
+					int panelHeight = ListingPanel.panelHeight - namePanel.getHeight() * 2;
+
+					double scaleX = (double) panelWidth / img.getWidth();
+					double scaleY = (double) panelHeight / img.getHeight();
+					double scale = Math.min(scaleX, scaleY);
+
+					int newW = (int) (img.getWidth() * scale);
+					int newH = (int) (img.getHeight() * scale);
+
+					BufferedImage scaled = getScaledImage(img, newW, newH);
+					return new ImageIcon(scaled);
+				}
+
+				@Override
+				protected void done() {
+					try {
+						ImageIcon icon = get();
+						if (icon != null) {
+							imgLabel.setIcon(icon);
+						} else {
+							imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			};
+			worker.execute();
 		} else {
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
 		}
@@ -97,6 +130,7 @@ public class FilePanel extends JPanel {
 				}
 			}
 		});
+
 		return panel;
 	}
 
@@ -116,9 +150,10 @@ public class FilePanel extends JPanel {
 	}
 
 	static boolean isImageFile(File file) {
-		String[] imageExtensions = new String[] { "jpg", "jpeg", "png", "gif", "bmp", "webp" };
-		for (String extension : imageExtensions) {
-			if (file.getName().endsWith(extension)) {
+		String name = file.getName().toLowerCase();
+		String[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+		for (String ext : imageExtensions) {
+			if (name.endsWith(ext)) {
 				return true;
 			}
 		}
@@ -151,8 +186,31 @@ public class FilePanel extends JPanel {
 		int newW = (int) (imgWidth * scale);
 		int newH = (int) (imgHeight * scale);
 
-		Image scaledImage = image.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
-		imgLabel.setIcon(new ImageIcon(scaledImage));
+		BufferedImage buffered = toBufferedImage(image); // ✅ convert first
+		BufferedImage scaled = getScaledImage(buffered, newW, newH);
 
+		imgLabel.setIcon(new ImageIcon(scaled));
 	}
+
+	private static BufferedImage toBufferedImage(Image img) {
+		if (img instanceof BufferedImage) {
+			return (BufferedImage) img;
+		}
+		BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = bimage.createGraphics();
+		g.drawImage(img, 0, 0, null);
+		g.dispose();
+		return bimage;
+	}
+
+	private static BufferedImage getScaledImage(BufferedImage src, int w, int h) {
+		BufferedImage resized = new BufferedImage(w, h,
+				src.getType() == 0 ? BufferedImage.TYPE_INT_RGB : src.getType());
+		Graphics2D g2 = resized.createGraphics();
+		g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+		g2.drawImage(src, 0, 0, w, h, null);
+		g2.dispose();
+		return resized;
+	}
+
 }
