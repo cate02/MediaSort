@@ -11,6 +11,8 @@ public class FileItem {
 	public final int id;
 	public boolean isSelected;
 	public List<String> tagsList;
+	public FilePanel filePanel;
+	public int selectControlCount = 0;
 
 	public FileItem(File file, String path, String name, int id, boolean isSelected) throws IOException {
 		this.file = file;

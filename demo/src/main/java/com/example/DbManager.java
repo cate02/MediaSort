@@ -208,42 +208,47 @@ public class DbManager {
 		return new String(hashed);
 	}
 
+	// Use a static thread pool for DB operations
+	private static final java.util.concurrent.ExecutorService dbExecutor = java.util.concurrent.Executors
+			.newFixedThreadPool(4);
+
 	static boolean checkDuplicate(File file) throws Exception {
-		String hash = calculateHash(file);
-		// Connection conn = DriverManager.getConnection("jdbc:sqlite:db.db");
-		String selectSQL = "SELECT COUNT(*) FROM files WHERE hash = ?;";
-		PreparedStatement stmt = conn.prepareStatement(selectSQL);
-		stmt.setString(1, hash);
+		final String hash = calculateHash(file);
+		final String newPath = file.getAbsolutePath();
 
-		ResultSet rs = stmt.executeQuery();
-		int occurrence = 0;
-		while (rs.next()) {
-			occurrence = rs.getInt(1);
-		}
-		// System.out.println(file.getName() + " " + occurrence + " Occurrence");
-		if (occurrence == 0) {
-			return false;
-		}
-		// CheckFilepath(hash);
-		// set path to files path
-		selectSQL = "SELECT path FROM files WHERE hash = ?;";
-		stmt = conn.prepareStatement(selectSQL);
-		stmt.setString(1, hash);
-		String existingPath = stmt.executeQuery().getString("path");
-		String newPath = file.getAbsolutePath();
-		if (!existingPath.equals(newPath)) {
-			String updateSQL = "UPDATE files SET path = ? WHERE hash = ?;";
-			stmt = conn.prepareStatement(updateSQL);
-			stmt.setString(1, newPath);
-			stmt.setString(2, hash);
-			stmt.executeUpdate();
-			Path relativePath = Paths.get(existingPath).toAbsolutePath()
-					.relativize(Paths.get(newPath).toAbsolutePath());
-			System.out.println(file.getName() + " moved to " + relativePath);
-		}
+		java.util.concurrent.Future<Boolean> future = dbExecutor.submit(() -> {
+			String selectSQL = "SELECT COUNT(*) FROM files WHERE hash = ?;";
+			PreparedStatement stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, hash);
 
-		// conn.close();
-		return occurrence > 0;
+			ResultSet rs = stmt.executeQuery();
+			int occurrence = 0;
+			if (rs.next()) {
+				occurrence = rs.getInt(1);
+			}
+			if (occurrence == 0) {
+				return false;
+			}
+			// Check file path and update if moved
+			selectSQL = "SELECT path FROM files WHERE hash = ?;";
+			stmt = conn.prepareStatement(selectSQL);
+			stmt.setString(1, hash);
+			ResultSet pathRs = stmt.executeQuery();
+			String existingPath = pathRs.next() ? pathRs.getString("path") : "";
+			if (!existingPath.equals(newPath)) {
+				String updateSQL = "UPDATE files SET path = ? WHERE hash = ?;";
+				PreparedStatement updateStmt = conn.prepareStatement(updateSQL);
+				updateStmt.setString(1, newPath);
+				updateStmt.setString(2, hash);
+				updateStmt.executeUpdate();
+				Path relativePath = Paths.get(existingPath).toAbsolutePath()
+						.relativize(Paths.get(newPath).toAbsolutePath());
+				System.out.println(file.getName() + " moved to " + relativePath);
+			}
+			return occurrence > 0;
+		});
+		boolean result = future.get(); // Wait for completion
+		return result;
 	}
 
 	private static void insertIntoDatabase(File file) throws Exception {
@@ -370,10 +375,10 @@ public class DbManager {
 
 	public static List<String> findTags(List<FileItem> files) {
 		List<String> tags = new ArrayList<>();
-		// find all tags for list of files, include any duplicate tags into the list
+		// find all unique tags for list of files
 		try {
 			StringBuilder query = new StringBuilder(
-					"SELECT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id INNER JOIN files f ON ft.file_id = f.id WHERE f.id IN (");
+					"SELECT DISTINCT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id INNER JOIN files f ON ft.file_id = f.id WHERE f.id IN (");
 			for (int i = 0; i < files.size(); i++) {
 				query.append("?");
 				if (i < files.size() - 1) {
@@ -385,6 +390,35 @@ public class DbManager {
 			for (int i = 0; i < files.size(); i++) {
 				stmt.setInt(i + 1, files.get(i).id);
 			}
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				tags.add(rs.getString("tag"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tags;
+	}
+
+	public static List<String> findSharedTags(List<FileItem> files) {
+
+		List<String> tags = new ArrayList<>();
+		// find all unique tags for list of files
+		try {
+			StringBuilder query = new StringBuilder(
+					"SELECT t.tag FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id INNER JOIN files f ON ft.file_id = f.id WHERE f.id IN (");
+			for (int i = 0; i < files.size(); i++) {
+				query.append("?");
+				if (i < files.size() - 1) {
+					query.append(", ");
+				}
+			}
+			query.append(") GROUP BY t.tag HAVING COUNT(DISTINCT f.id) = ?;");
+			PreparedStatement stmt = conn.prepareStatement(query.toString());
+			for (int i = 0; i < files.size(); i++) {
+				stmt.setInt(i + 1, files.get(i).id);
+			}
+			stmt.setInt(files.size() + 1, files.size());
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				tags.add(rs.getString("tag"));

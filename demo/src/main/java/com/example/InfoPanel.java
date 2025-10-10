@@ -250,7 +250,7 @@ public class InfoPanel extends JPanel {
 
 		List<String> foundTags = new ArrayList<>();
 		List<String> tags = new ArrayList<>();
-		foundTags = DbManager.findTags(ListingPanel.selectedFiles);
+		foundTags = DbManager.findSharedTags(ListingPanel.selectedFiles);
 		fileTagsList.setListData(foundTags.toArray(new String[0]));
 		// System.out.println(foundTags.toArray(new String[0]));
 	}

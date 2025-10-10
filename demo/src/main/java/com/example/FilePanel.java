@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
-import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -32,21 +31,29 @@ public class FilePanel extends JPanel {
 	private CardLayout cardLayout = new CardLayout();
 	private JPanel cards = new JPanel(cardLayout);
 	private JLabel imgLabel = new JLabel();
-	private Image image;
 	private JPanel namePanel;
+
+	public JPanel detailView;
 
 	private int borderSize = 3;
 
 	public void setSelected(boolean state) {
+		// for stacking select all click
+		if (state == fileItem.isSelected)
+			return;
+		if (!ListingPanel.canSelect)
+			return;
 		fileItem.isSelected = state;
 		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize,
 				fileItem.isSelected ? Color.green : gray));
 		ListingPanel.changeSelectedFiles(fileItem, state ? 1 : -1);
+
 	}
 
 	public FilePanel(FileItem fileItem) {
 
 		this.fileItem = fileItem;
+		fileItem.filePanel = this;
 		setLayout(new BorderLayout());
 		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize,
 				fileItem.isSelected ? Color.green : gray));
@@ -58,7 +65,7 @@ public class FilePanel extends JPanel {
 		add(namePanel, BorderLayout.SOUTH);
 
 		JPanel imageView = createImageView();
-		JPanel detailView = createDetailView();
+		detailView = createDetailView();
 		cards.add(imageView, "image");
 		cards.add(detailView, "detail");
 		add(cards, BorderLayout.CENTER);
@@ -72,47 +79,18 @@ public class FilePanel extends JPanel {
 		panel.add(imgLabel, BorderLayout.CENTER);
 
 		if (isImageFile(fileItem.file)) {
+			// set the fucking image to the fucking files image
+			try {
+				// image = ImageIO.read(fileItem.file);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
 			// show placeholder immediately
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon")); // or custom "loading" icon
 
 			// Load in background
-			SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
-				@Override
-				protected ImageIcon doInBackground() throws Exception {
-					BufferedImage img = ImageIO.read(fileItem.file);
-					if (img == null)
-						return null;
 
-					// scale it for the panel
-					int panelWidth = ListingPanel.panelWidth;
-					int panelHeight = ListingPanel.panelHeight - namePanel.getHeight() * 2;
-
-					double scaleX = (double) panelWidth / img.getWidth();
-					double scaleY = (double) panelHeight / img.getHeight();
-					double scale = Math.min(scaleX, scaleY);
-
-					int newW = (int) (img.getWidth() * scale);
-					int newH = (int) (img.getHeight() * scale);
-
-					BufferedImage scaled = getScaledImage(img, newW, newH);
-					return new ImageIcon(scaled);
-				}
-
-				@Override
-				protected void done() {
-					try {
-						ImageIcon icon = get();
-						if (icon != null) {
-							imgLabel.setIcon(icon);
-						} else {
-							imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			};
-			worker.execute();
 		} else {
 			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
 		}
@@ -121,12 +99,55 @@ public class FilePanel extends JPanel {
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				if (e.getClickCount() == 2) {
+				// if left click
+				if (e.getButton() == MouseEvent.BUTTON1) {
+
+					if (e.getClickCount() == 2) {
+						try {
+							Desktop.getDesktop().open(fileItem.file);
+						} catch (IOException ex) {
+							ex.printStackTrace();
+						}
+					}
+				}
+				if (e.getButton() == MouseEvent.BUTTON3) {
 					try {
-						Desktop.getDesktop().open(fileItem.file);
+						Desktop.getDesktop().open(fileItem.file.getParentFile()); // fallback for non-Windows
+
+						// On Windows, open Explorer with the file pre-selected
+						if (System.getProperty("os.name").toLowerCase().contains("win")) {
+							String path = fileItem.file.getAbsolutePath();
+							// explorer expects backslashes
+							path = path.replace('/', '\\');
+							new ProcessBuilder("explorer.exe", "/select,", path).start();
+						} else {
+							// rip bozo
+						}
 					} catch (IOException ex) {
 						ex.printStackTrace();
 					}
+				}
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				if (e.getButton() == MouseEvent.BUTTON1) {
+					setSelected(!fileItem.isSelected);
+				}
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				if (e.getButton() == MouseEvent.BUTTON1) {
+				}
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				System.err.println("entered " + fileItem.name);
+				if (e.getModifiersEx() == MouseEvent.BUTTON1_DOWN_MASK) {
+					System.err.println("drag select " + fileItem.name);
+					setSelected(!fileItem.isSelected);
 				}
 			}
 		});
@@ -143,6 +164,8 @@ public class FilePanel extends JPanel {
 		JScrollPane scrollPane = new JScrollPane(tagsList);
 		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		tagsList.setEnabled(false);
+		tagsList.setFocusable(false);
 		// to make it take as much space
 		panel.setLayout(new GridLayout());
 		panel.add(scrollPane);
@@ -168,39 +191,65 @@ public class FilePanel extends JPanel {
 		cardLayout.show(cards, "detail");
 	}
 
+	private SwingWorker<ImageIcon, Void> imageWorker;
+
 	public void drawImage() {
-		if (image == null) {
-			return;
+		System.out.println("Drawing image for " + fileItem.name);
+		// Cancel previous worker if still running
+		if (imageWorker != null && !imageWorker.isDone()) {
+			imageWorker.cancel(true);
 		}
 
-		int imgWidth = image.getWidth(null);
-		int imgHeight = image.getHeight(null);
-		int panelWidth = ListingPanel.panelWidth;
-		int panelHeight = ListingPanel.panelHeight;
-		panelHeight -= namePanel.getHeight() * 2;
+		imageWorker = new SwingWorker<>() {
 
-		double scaleX = (double) panelWidth / imgWidth;
-		double scaleY = (double) panelHeight / imgHeight;
-		double scale = Math.min(scaleX, scaleY); // fit inside panel
+			@Override
 
-		int newW = (int) (imgWidth * scale);
-		int newH = (int) (imgHeight * scale);
+			protected ImageIcon doInBackground() throws Exception {
 
-		BufferedImage buffered = toBufferedImage(image); // ✅ convert first
-		BufferedImage scaled = getScaledImage(buffered, newW, newH);
+				if (isCancelled())
+					return null;
+				BufferedImage img = ImageIO.read(fileItem.file);
 
-		imgLabel.setIcon(new ImageIcon(scaled));
-	}
+				if (img == null || isCancelled())
+					return null;
+				if (img.getWidth() <= 0 || img.getHeight() <= 0)
+					return null;
 
-	private static BufferedImage toBufferedImage(Image img) {
-		if (img instanceof BufferedImage) {
-			return (BufferedImage) img;
-		}
-		BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_RGB);
-		Graphics2D g = bimage.createGraphics();
-		g.drawImage(img, 0, 0, null);
-		g.dispose();
-		return bimage;
+				int panelWidth = ListingPanel.panelWidth;
+				int panelHeight = ListingPanel.panelHeight - namePanel.getHeight() * 2;
+
+				double scaleX = (double) panelWidth / img.getWidth();
+				double scaleY = (double) panelHeight / img.getHeight();
+				double scale = Math.min(scaleX, scaleY);
+
+				// if scale <=0 return null
+				if (scale <= 0)
+					return null;
+
+				int newW = (int) (img.getWidth() * scale);
+				int newH = (int) (img.getHeight() * scale);
+
+				BufferedImage scaled = getScaledImage(img, newW, newH);
+				return new ImageIcon(scaled);
+			}
+
+			@Override
+			protected void done() {
+				if (isCancelled())
+					return;
+				try {
+					ImageIcon icon = get();
+					if (icon != null) {
+						imgLabel.setIcon(icon);
+					} else {
+						imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		};
+		imageWorker.execute();
 	}
 
 	private static BufferedImage getScaledImage(BufferedImage src, int w, int h) {
@@ -212,5 +261,60 @@ public class FilePanel extends JPanel {
 		g2.dispose();
 		return resized;
 	}
+
+	/*
+	 * private void addSelectionListeners(JPanel filePanel, FileItem fileItem) {
+	 * MouseAdapter listener = new MouseAdapter() {
+	 *
+	 * @Override public void mousePressed(MouseEvent e) { mouseDown = true;
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected); }
+	 *
+	 * @Override public void mouseReleased(MouseEvent e) { mouseDown = false; }
+	 *
+	 * @Override public void mouseEntered(MouseEvent e) { if (mouseDown) {
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected); } } };
+	 * //filePanel.addMouseListener(listener); }
+	 *
+	 * int iii = 0;
+	 *
+	 * private void addMouseListenerRecursively(Component comp, FileItem fileItem) {
+	 * MouseAdapter listener = new MouseAdapter() {
+	 *
+	 * @Override public void mousePressed(MouseEvent e) { mouseDown = true; //
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected);
+	 * fileItem.selectControlCount++; iii++; System.out.println(fileItem.name + " "
+	 * + iii + " press"); //
+	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); if
+	 * (fileItem.selectControlCount > 0) {
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected);
+	 * System.out.println("toggled"); } else System.out.println("not toggled");
+	 *
+	 * }
+	 *
+	 * @Override public void mouseReleased(MouseEvent e) { mouseDown = false;
+	 * fileItem.selectControlCount--; iii--; System.out.println(fileItem.name + " "
+	 * + iii + " release"); //
+	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); // iii++; }
+	 *
+	 * @Override public void mouseEntered(MouseEvent e) { if (mouseDown) { //
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected); iii++;
+	 * System.out.println(fileItem.name + " " + iii + " enter");
+	 *
+	 * // fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); if
+	 * (fileItem.selectControlCount == 0) {
+	 * fileItem.filePanel.setSelected(!fileItem.isSelected); }
+	 * fileItem.selectControlCount++;
+	 *
+	 * } }
+	 *
+	 * @Override public void mouseExited(MouseEvent e) { if (mouseDown) { iii--;
+	 * System.out.println(fileItem.name + " " + iii + " exit");
+	 * fileItem.selectControlCount--; } //
+	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); } };
+	 *
+	 * comp.addMouseListener(listener); if (comp instanceof Container container) {
+	 * for (Component child : container.getComponents()) {
+	 * addMouseListenerRecursively(child, fileItem); } } }
+	 */
 
 }

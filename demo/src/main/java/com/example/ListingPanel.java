@@ -8,8 +8,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -23,7 +21,6 @@ import javax.swing.JSlider;
 import javax.swing.ScrollPaneConstants;
 
 public class ListingPanel extends JPanel {
-	private boolean mouseDown = false;
 	private boolean debugListing = false;
 	static Color black = new Color(0, 0, 0);
 
@@ -38,8 +35,11 @@ public class ListingPanel extends JPanel {
 	private JCheckBox autoRefreshCheck = new JCheckBox("Auto Refresh", true);
 	private int scrollBarPosition = 0;
 
-	public List<FilePanel> activeFilePanels = new ArrayList<>();
+	public static List<FilePanel> activeFilePanels = new ArrayList<>();
 	public static List<FileItem> selectedFiles = new ArrayList<>();
+
+	private static JLabel selectedCountLabel = new JLabel("Selected: 0");
+	public static boolean canSelect = true;
 
 	public ListingPanel() {
 
@@ -77,8 +77,11 @@ public class ListingPanel extends JPanel {
 		setLayout(new BorderLayout());
 		JPanel topPanel = SetUpTopPanel();
 		topPanel.setPreferredSize(new Dimension(1, 60));
+		JPanel bottomPanel = SetUpBottomPanel();
+		// bottomPanel.setPreferredSize(new Dimension(1, 30));
 		add(topPanel, BorderLayout.NORTH);
 		add(scrollPane, BorderLayout.CENTER);
+		add(bottomPanel, BorderLayout.SOUTH);
 
 		// Example: add some panels for demonstration
 		if (debugListing) {
@@ -95,7 +98,8 @@ public class ListingPanel extends JPanel {
 	public void addPanel(JPanel panel) {
 		activeFilePanels.add((FilePanel) panel);
 		panel.setSize(panelWidth, panelHeight);
-		addSelectionListeners((FilePanel) panel);
+		// addSelectionListeners(panel, ((FilePanel) panel).fileItem);
+		// addMouseListenerRecursively(panel, ((FilePanel) panel).fileItem);
 		contentPanel.add(panel);
 		layoutPanels();
 		// updateImageScales();
@@ -209,6 +213,62 @@ public class ListingPanel extends JPanel {
 		return panel;
 	}
 
+	private JPanel SetUpBottomPanel() {
+		// checkbox 'selecting', selected count, switch clear selected/select all button
+		JPanel panel = new JPanel();
+		panel.setLayout(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridy = 0;
+		c.insets = new java.awt.Insets(5, 10, 5, 10); // top, left, bottom, right
+
+		// checkbox to toggle selecting
+		JCheckBox selectingCheck = new JCheckBox("Selecting", true);
+		selectingCheck.addActionListener(e -> {
+			canSelect = selectingCheck.isSelected();
+		});
+		c.gridx = 0;
+		c.anchor = GridBagConstraints.WEST;
+		panel.add(selectingCheck, c);
+
+		// selected count label
+		c.gridx = 1;
+		c.anchor = GridBagConstraints.WEST;
+
+		panel.add(selectedCountLabel, c);
+		// clear selected button
+		c.gridx = 2;
+		c.anchor = GridBagConstraints.CENTER;
+		JButton clearSelectedButton = new JButton("Clear Selected");
+		clearSelectedButton.addActionListener(e -> {
+			for (FilePanel filePanel : activeFilePanels) {
+				filePanel.setSelected(false);
+
+			}
+			selectedFiles.clear();
+			// InfoPanel.tabbedPane.setEnabledAt(1, false);
+			// InfoPanel.tabbedPane.setSelectedIndex(0);
+			// selectedCountLabel.setText("Selected: 0");
+			// InfoPanel.updateFileTags();
+		});
+		panel.add(clearSelectedButton, c);
+		// select all button
+		c.gridx = 3;
+		c.anchor = GridBagConstraints.EAST;
+		JButton selectAllButton = new JButton("Select All");
+		selectAllButton.addActionListener(e -> {
+			for (FilePanel filePanel : activeFilePanels) {
+				filePanel.setSelected(true);
+			}
+			// InfoPanel.tabbedPane.setEnabledAt(1, true);
+			// InfoPanel.tabbedPane.setSelectedIndex(1);
+			// InfoPanel.updateFileTags();
+		});
+		panel.add(selectAllButton, c);
+		return panel;
+
+	}
+
 	public static void layoutPanels() {
 		int width = scrollPane.getViewport().getWidth();
 		if (width == 0)
@@ -241,7 +301,7 @@ public class ListingPanel extends JPanel {
 	}
 
 	static void updateImageScales() {
-		for (FilePanel filePanel : GUI.activeFiles) {
+		for (FilePanel filePanel : activeFilePanels) {
 			filePanel.drawImage();
 		}
 	}
@@ -261,30 +321,8 @@ public class ListingPanel extends JPanel {
 			InfoPanel.tabbedPane.setEnabledAt(1, true);
 			InfoPanel.tabbedPane.setSelectedIndex(1);
 		}
-		System.out.println("Selected items: " + selectedFiles.size());
+		selectedCountLabel.setText("Selected: " + selectedFiles.size());
 		InfoPanel.updateFileTags();
-	}
-
-	private void addSelectionListeners(FilePanel filePanel) {
-		filePanel.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mousePressed(MouseEvent e) {
-				mouseDown = true;
-				filePanel.setSelected(!filePanel.fileItem.isSelected);
-			}
-
-			@Override
-			public void mouseReleased(MouseEvent e) {
-				mouseDown = false;
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-				if (mouseDown) {
-					filePanel.setSelected(!filePanel.fileItem.isSelected);
-				}
-			}
-		});
 	}
 
 }

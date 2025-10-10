@@ -2,19 +2,16 @@ package com.example;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
-import javax.swing.JList;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextField;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
-public class GUI {
+public final class GUI {
 	private static Preferences preferences;
 
 	// static List<FileItem> selectedFileItems = new ArrayList<>();
@@ -23,35 +20,24 @@ public class GUI {
 	ListingPanel listingPanel = new ListingPanel();
 	InfoPanel infoPanel = new InfoPanel();
 	TagManager manageTagsPanel = new TagManager();
-
-	JList<String> searchedTagsList = new JList<>();
-	JList<String> appliedTagsList = new JList<>();
-	static JList<String> fileTagsList = new JList<>();
-	JTextField tagSearchField = new JTextField();
 	private static JSplitPane splitPane;
 
 	public static JTabbedPane tabbedPane = new JTabbedPane();
 
-	static List<FilePanel> activeFiles = new ArrayList<>();
-	boolean isDetailView = false;
-
 	GUI() {
-		infoPanel.listingPanel = listingPanel;
-		infoPanel.frame = frame;
 		infoPanel.gui = this;
+		infoPanel.frame = frame;
+		infoPanel.listingPanel = listingPanel;
 
-		preferences = Preferences.userNodeForPackage(MediaSort.class);
-		setUpGUI();
-		activeFiles.clear();
 		List<FileItem> fileItems = DbManager.getFileItems();
 		for (FileItem fileItem : fileItems) {
 			FilePanel filePanel = new FilePanel(fileItem);
 			listingPanel.addPanel(filePanel);
-			activeFiles.add(filePanel);
-			// System.out.println("Added file panel for " + fileItem.name);
 		}
+		listingPanel.updateImageScales();
 
-		// RefreshListing();
+		preferences = Preferences.userNodeForPackage(MediaSort.class);
+		setUpGUI();
 	}
 
 	void setUpGUI() {
