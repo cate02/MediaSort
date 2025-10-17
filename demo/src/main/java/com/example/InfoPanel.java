@@ -237,22 +237,24 @@ public class InfoPanel extends JPanel {
 	}
 
 	public static void updateFileTags() {
-		// find all tags that all selected files use
-		// add tags to file tags list
-
-		// when search tag clicked
-		// add tag to all selected files
-		// update file tags
-
-		// when file tag clicked
-		// remove tag from all
-		// update tags and results
-
 		List<String> foundTags = new ArrayList<>();
-		List<String> tags = new ArrayList<>();
 		foundTags = DbManager.findSharedTags(ListingPanel.selectedFiles);
+		UpdateSelectedHighlight(foundTags);
+
 		fileTagsList.setListData(foundTags.toArray(new String[0]));
-		// System.out.println(foundTags.toArray(new String[0]));
+	}
+
+	private static void UpdateSelectedHighlight(List<String> foundTags) {
+		for (FilePanel filePanel : activeFiles) {
+			List<String> fileTags = filePanel.fileItem.tagsList;
+			for (String tag : foundTags) {
+				if (fileTags.contains(tag)) {
+					filePanel.setHighlight(tag, TagMatchState.Full);
+				}
+			}
+		}
+		appliedTagsList.repaint();
+		fileTagsList.repaint();
 	}
 
 	private static void updateResults() {

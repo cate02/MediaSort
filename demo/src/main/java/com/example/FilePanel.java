@@ -1,11 +1,15 @@
 package com.example;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -16,16 +20,27 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 
 // import org.w3c.dom.events.MouseEvent; // Removed incorrect import
 
+enum TagMatchState {
+	Full, Partial, None
+}
+
 public class FilePanel extends JPanel {
+	private boolean mouseInside = false;
+	private boolean oldMouseInside = false;
+
 	public FileItem fileItem;
 	private Color gray = new Color(128, 128, 128);
 	private CardLayout cardLayout = new CardLayout();
@@ -69,33 +84,14 @@ public class FilePanel extends JPanel {
 		cards.add(imageView, "image");
 		cards.add(detailView, "detail");
 		add(cards, BorderLayout.CENTER);
+		setupListeners();
+
 		showImageView();
 	}
 
-	private JPanel createImageView() {
-		JPanel panel = new JPanel(new BorderLayout());
-		imgLabel.setHorizontalAlignment(JLabel.CENTER);
-		imgLabel.setVerticalAlignment(JLabel.CENTER);
-		panel.add(imgLabel, BorderLayout.CENTER);
+	int i = 0;
 
-		if (isImageFile(fileItem.file)) {
-			// set the fucking image to the fucking files image
-			try {
-				// image = ImageIO.read(fileItem.file);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
-			// show placeholder immediately
-			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon")); // or custom "loading" icon
-
-			// Load in background
-
-		} else {
-			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
-		}
-
-		// fix not registering when mouse moves a pixel
+	void setupListeners() {
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -132,25 +128,117 @@ public class FilePanel extends JPanel {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				if (e.getButton() == MouseEvent.BUTTON1) {
+					i++;
+					mouseInside = true;
+					oldMouseInside = mouseInside;
 					setSelected(!fileItem.isSelected);
+					// System.out.println("Pressed " + i);
 				}
 			}
 
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				if (e.getButton() == MouseEvent.BUTTON1) {
-				}
+				i++;
+				// System.out.println("Released " + i);
 			}
 
 			@Override
 			public void mouseEntered(MouseEvent e) {
-				System.err.println("entered " + fileItem.name);
+				i++;
 				if (e.getModifiersEx() == MouseEvent.BUTTON1_DOWN_MASK) {
-					System.err.println("drag select " + fileItem.name);
-					setSelected(!fileItem.isSelected);
+					// System.err.println("Entered " + i);
+					mouseInside = true;
+					if (oldMouseInside == false) {
+						setSelected(!fileItem.isSelected);
+					}
+					oldMouseInside = mouseInside;
+					// is mouse
+
 				}
 			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// find whether mouse still inside filepanel
+				Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), FilePanel.this);
+				boolean actuallyInside = new Rectangle(0, 0, getWidth(), getHeight()).contains(p);
+
+				// debugRect(getBounds(), Color.RED);
+				// debugRect(new java.awt.Rectangle(e.getX(), e.getY(), 1, 1), Color.BLUE);
+
+				if (actuallyInside) {
+					// System.err.println("Exited but still inside " + i + " " +
+					// FilePanel.this.getClass().getName());
+					return;
+				}
+				i++;
+				// System.out.println("Exited " + i);
+				mouseInside = false;
+				oldMouseInside = mouseInside;
+			}
 		});
+	}
+
+	void debugRect(Rectangle rect, Color color) {
+		JRootPane root = SwingUtilities.getRootPane(FilePanel.this);
+		if (root == null)
+			return;
+
+		JComponent glass = (JComponent) root.getGlassPane();
+		glass.setVisible(true);
+		glass.setLayout(null);
+
+		// Convert correctly: if rect is from getBounds(), convert from parent, not
+		// FilePanel
+		Rectangle rOnGlass = SwingUtilities.convertRectangle(FilePanel.this.getParent(), // convert from parent
+																							// coordinates
+				rect, glass);
+
+		JComponent overlay = new JComponent() {
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2 = (Graphics2D) g;
+				g2.setColor(color);
+				g2.setStroke(new BasicStroke(2));
+				g2.drawRect(rOnGlass.x, rOnGlass.y, rOnGlass.width, rOnGlass.height);
+			}
+		};
+		overlay.setOpaque(false);
+		overlay.setBounds(0, 0, glass.getWidth(), glass.getHeight());
+		glass.add(overlay, 0);
+		glass.repaint();
+
+		new Timer(500, e -> {
+			glass.remove(overlay);
+			glass.repaint();
+		}).start();
+	}
+
+	private JPanel createImageView() {
+		JPanel panel = new JPanel(new BorderLayout());
+		imgLabel.setHorizontalAlignment(JLabel.CENTER);
+		imgLabel.setVerticalAlignment(JLabel.CENTER);
+		panel.add(imgLabel, BorderLayout.CENTER);
+
+		if (isImageFile(fileItem.file)) {
+			// set the fucking image to the fucking files image
+			try {
+				// image = ImageIO.read(fileItem.file);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			// show placeholder immediately
+			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon")); // or custom "loading" icon
+
+			// Load in background
+
+		} else {
+			imgLabel.setIcon(UIManager.getIcon("FileView.fileIcon"));
+		}
+
+		// fix not registering when mouse moves a pixel
 
 		return panel;
 	}
@@ -169,7 +257,42 @@ public class FilePanel extends JPanel {
 		// to make it take as much space
 		panel.setLayout(new GridLayout());
 		panel.add(scrollPane);
+
+		propagateMouse(panel);
+		propagateMouse(scrollPane);
+		propagateMouse(tagsList);
+
 		return panel;
+	}
+
+	private void propagateMouse(JComponent comp) {
+		comp.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				FilePanel.this.dispatchEvent(SwingUtilities.convertMouseEvent(comp, e, FilePanel.this));
+			}
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				FilePanel.this.dispatchEvent(SwingUtilities.convertMouseEvent(comp, e, FilePanel.this));
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				FilePanel.this.dispatchEvent(SwingUtilities.convertMouseEvent(comp, e, FilePanel.this));
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				FilePanel.this.dispatchEvent(SwingUtilities.convertMouseEvent(comp, e, FilePanel.this));
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				FilePanel.this.dispatchEvent(SwingUtilities.convertMouseEvent(comp, e, FilePanel.this));
+			}
+
+		});
 	}
 
 	static boolean isImageFile(File file) {
@@ -260,6 +383,24 @@ public class FilePanel extends JPanel {
 		g2.drawImage(src, 0, 0, w, h, null);
 		g2.dispose();
 		return resized;
+	}
+
+	public void setHighlight(String tag, TagMatchState matchState) {
+		Color highlightColor;
+		switch (matchState) {
+		case Full:
+			highlightColor = new Color(144, 238, 144); // light green
+			break;
+		case Partial:
+			highlightColor = new Color(255, 255, 102); // light yellow
+			break;
+		case None:
+		default:
+			highlightColor = gray;
+			break;
+		}
+		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, highlightColor));
+		System.out.println("Set highlight for " + fileItem.name + " to " + matchState);
 	}
 
 	/*
