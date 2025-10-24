@@ -8,6 +8,7 @@ import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,8 +38,6 @@ public class InfoPanel extends JPanel {
 
 	public static ListingPanel listingPanel;
 	public static JFrame frame;
-
-	static List<FilePanel> activeFiles = new ArrayList<>();
 	static boolean isDetailView = false;
 	public GUI gui;
 
@@ -211,13 +210,9 @@ public class InfoPanel extends JPanel {
 
 		JButton detailToggleButton = new JButton("Detail view");
 		detailToggleButton.addActionListener(e -> {
-			// get all panels from filePanel
-			List<FilePanel> activeFiles = listingPanel.activeFilePanels;
-			// System.out.println("Toggling detail view for " + activeFiles.size() + "
-			// files");
 
 			isDetailView = !isDetailView;
-			for (FilePanel filePanel : activeFiles) {
+			for (FilePanel filePanel : listingPanel.activeFilePanels) {
 				if (isDetailView)
 					filePanel.showDetailView();
 				else
@@ -237,21 +232,38 @@ public class InfoPanel extends JPanel {
 	}
 
 	public static void updateFileTags() {
-		List<String> foundTags = new ArrayList<>();
-		foundTags = DbManager.findSharedTags(ListingPanel.selectedFiles);
-		UpdateSelectedHighlight(foundTags);
-
-		fileTagsList.setListData(foundTags.toArray(new String[0]));
-	}
-
-	private static void UpdateSelectedHighlight(List<String> foundTags) {
-		for (FilePanel filePanel : activeFiles) {
-			List<String> fileTags = filePanel.fileItem.tagsList;
-			for (String tag : foundTags) {
-				if (fileTags.contains(tag)) {
-					filePanel.setHighlight(tag, TagMatchState.Full);
+		List<String> sharedTags = new ArrayList<>();
+		sharedTags = DbManager.findSharedTags(ListingPanel.selectedFiles);
+		List<String> selectedFilesTags = new ArrayList<>();
+		for (FileItem fileItem : ListingPanel.selectedFiles) {
+			for (String tag : fileItem.tagsList) {
+				if (!selectedFilesTags.contains(tag)) {
+					selectedFilesTags.add(tag);
 				}
 			}
+		}
+		// in selectedfilestags, remove its entries which include a tag from shared tags
+		selectedFilesTags.removeAll(sharedTags);
+		UpdateSelectedHighlight(sharedTags, selectedFilesTags);
+
+		fileTagsList.setListData(sharedTags.toArray(new String[0]));
+	}
+
+	private static void UpdateSelectedHighlight(List<String> sharedTags, List<String> selectedFilesTags) {
+		for (FilePanel filePanel : listingPanel.activeFilePanels) {
+			HashMap<String, TagMatchState> highlightMap = new HashMap<>();
+			List<String> fileTags = filePanel.fileItem.tagsList;
+			for (String tag : sharedTags) {
+				if (fileTags.contains(tag)) {
+					highlightMap.put(tag, TagMatchState.Full);
+				}
+			}
+			for (String tag : selectedFilesTags) {
+				if (fileTags.contains(tag)) {
+					highlightMap.put(tag, TagMatchState.Partial);
+				}
+			}
+			filePanel.setHighlight(highlightMap);
 		}
 		appliedTagsList.repaint();
 		fileTagsList.repaint();
@@ -294,6 +306,12 @@ public class InfoPanel extends JPanel {
 		}
 
 		// listingPanel.layoutPanels();
+		// assign listingpanels activefilepanels to correct this.fileitems.filepanels
+		listingPanel.activeFilePanels.clear();
+		for (FileItem fileItem : fileItems) {
+			listingPanel.activeFilePanels.add(fileItem.filePanel);
+		}
+
 		listingPanel.updateImageScales();
 		System.out.println("Updated results with " + fileItems.size() + " items");
 		CleanFrame(frame);

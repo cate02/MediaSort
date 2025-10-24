@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -16,9 +17,12 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -47,6 +51,9 @@ public class FilePanel extends JPanel {
 	private JPanel cards = new JPanel(cardLayout);
 	private JLabel imgLabel = new JLabel();
 	private JPanel namePanel;
+
+	private JList<String> tagsList;
+	private JScrollPane tagsScrollPane;
 
 	public JPanel detailView;
 
@@ -248,19 +255,20 @@ public class FilePanel extends JPanel {
 		// hover tags shows connected tags?
 		// use jtree?
 		JPanel panel = new JPanel();
-		JList<String> tagsList = new JList<>(fileItem.tagsList.toArray(new String[0]));
-		JScrollPane scrollPane = new JScrollPane(tagsList);
-		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		tagsList = new JList<>(fileItem.tagsList.toArray(new String[0]));
+		tagsScrollPane = new JScrollPane(tagsList);
+		tagsScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		tagsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		tagsList.setEnabled(false);
 		tagsList.setFocusable(false);
 		// to make it take as much space
 		panel.setLayout(new GridLayout());
-		panel.add(scrollPane);
+		panel.add(tagsScrollPane);
 
 		propagateMouse(panel);
-		propagateMouse(scrollPane);
+		propagateMouse(tagsScrollPane);
 		propagateMouse(tagsList);
+		setupTagListRenderer();
 
 		return panel;
 	}
@@ -317,7 +325,7 @@ public class FilePanel extends JPanel {
 	private SwingWorker<ImageIcon, Void> imageWorker;
 
 	public void drawImage() {
-		System.out.println("Drawing image for " + fileItem.name);
+		// System.out.println("Drawing image for " + fileItem.name);
 		// Cancel previous worker if still running
 		if (imageWorker != null && !imageWorker.isDone()) {
 			imageWorker.cancel(true);
@@ -385,77 +393,38 @@ public class FilePanel extends JPanel {
 		return resized;
 	}
 
-	public void setHighlight(String tag, TagMatchState matchState) {
-		Color highlightColor;
-		switch (matchState) {
-		case Full:
-			highlightColor = new Color(144, 238, 144); // light green
-			break;
-		case Partial:
-			highlightColor = new Color(255, 255, 102); // light yellow
-			break;
-		case None:
-		default:
-			highlightColor = gray;
-			break;
-		}
-		setBorder(BorderFactory.createMatteBorder(borderSize, borderSize, borderSize, borderSize, highlightColor));
-		System.out.println("Set highlight for " + fileItem.name + " to " + matchState);
+	Map<String, TagMatchState> highlightMap = new HashMap<>();
+
+	public void setHighlight(HashMap<String, TagMatchState> highlightMap) {
+		this.highlightMap = highlightMap;
+		tagsList.repaint(); // triggers re-rendering of cells with new colors
 	}
 
-	/*
-	 * private void addSelectionListeners(JPanel filePanel, FileItem fileItem) {
-	 * MouseAdapter listener = new MouseAdapter() {
-	 *
-	 * @Override public void mousePressed(MouseEvent e) { mouseDown = true;
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected); }
-	 *
-	 * @Override public void mouseReleased(MouseEvent e) { mouseDown = false; }
-	 *
-	 * @Override public void mouseEntered(MouseEvent e) { if (mouseDown) {
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected); } } };
-	 * //filePanel.addMouseListener(listener); }
-	 *
-	 * int iii = 0;
-	 *
-	 * private void addMouseListenerRecursively(Component comp, FileItem fileItem) {
-	 * MouseAdapter listener = new MouseAdapter() {
-	 *
-	 * @Override public void mousePressed(MouseEvent e) { mouseDown = true; //
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected);
-	 * fileItem.selectControlCount++; iii++; System.out.println(fileItem.name + " "
-	 * + iii + " press"); //
-	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); if
-	 * (fileItem.selectControlCount > 0) {
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected);
-	 * System.out.println("toggled"); } else System.out.println("not toggled");
-	 *
-	 * }
-	 *
-	 * @Override public void mouseReleased(MouseEvent e) { mouseDown = false;
-	 * fileItem.selectControlCount--; iii--; System.out.println(fileItem.name + " "
-	 * + iii + " release"); //
-	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); // iii++; }
-	 *
-	 * @Override public void mouseEntered(MouseEvent e) { if (mouseDown) { //
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected); iii++;
-	 * System.out.println(fileItem.name + " " + iii + " enter");
-	 *
-	 * // fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); if
-	 * (fileItem.selectControlCount == 0) {
-	 * fileItem.filePanel.setSelected(!fileItem.isSelected); }
-	 * fileItem.selectControlCount++;
-	 *
-	 * } }
-	 *
-	 * @Override public void mouseExited(MouseEvent e) { if (mouseDown) { iii--;
-	 * System.out.println(fileItem.name + " " + iii + " exit");
-	 * fileItem.selectControlCount--; } //
-	 * fileItem.filePanel.setSelected(fileItem.selectControlCount > 0); } };
-	 *
-	 * comp.addMouseListener(listener); if (comp instanceof Container container) {
-	 * for (Component child : container.getComponents()) {
-	 * addMouseListenerRecursively(child, fileItem); } } }
-	 */
+	private void setupTagListRenderer() {
+		tagsList.setCellRenderer(new DefaultListCellRenderer() {
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+					boolean cellHasFocus) {
+				Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+				String tag = (String) value;
+				TagMatchState state = highlightMap.getOrDefault(tag, TagMatchState.None);
+
+				// Apply color depending on tag's state
+				if (state == TagMatchState.Full) {
+					// make it ligher blue
+					c.setBackground(new Color(204, 229, 255)); // light blue
+				} else if (state == TagMatchState.Partial) {
+					// lighter purple
+					c.setBackground(new Color(255, 204, 255)); // light purple
+
+				} else if (!isSelected) {
+					c.setBackground(Color.WHITE); // reset
+				}
+
+				return c;
+			}
+		});
+	}
 
 }

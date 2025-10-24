@@ -96,6 +96,7 @@ public class ListingPanel extends JPanel {
 	}
 
 	public void addPanel(JPanel panel) {
+		System.out.println("Adding panel to listing for file: " + ((FilePanel) panel).fileItem.name);
 		activeFilePanels.add((FilePanel) panel);
 		panel.setSize(panelWidth, panelHeight);
 		// addSelectionListeners(panel, ((FilePanel) panel).fileItem);
@@ -257,6 +258,7 @@ public class ListingPanel extends JPanel {
 		c.anchor = GridBagConstraints.EAST;
 		JButton selectAllButton = new JButton("Select All");
 		selectAllButton.addActionListener(e -> {
+			System.out.println("active file panels size: " + activeFilePanels.size());
 			for (FilePanel filePanel : activeFilePanels) {
 				filePanel.setSelected(true);
 			}
