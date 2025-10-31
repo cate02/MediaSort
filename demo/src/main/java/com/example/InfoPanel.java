@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
 import javax.swing.JButton;
@@ -41,7 +42,10 @@ public class InfoPanel extends JPanel {
 	static boolean isDetailView = false;
 	public GUI gui;
 
+	public Preferences preferences;
+
 	public InfoPanel() {
+		preferences = Preferences.userNodeForPackage(MediaSort.class);
 		// pref size
 		// setPreferredSize(new java.awt.Dimension(300, 600));
 
@@ -201,10 +205,10 @@ public class InfoPanel extends JPanel {
 			isManagingTags = !isManagingTags;
 			if (isManagingTags) {
 				manageTagsButton.setText("View files");
-				gui.ChangeRightView(1);
+				gui.changeRightView(1);
 			} else {
 				manageTagsButton.setText("Manage tags");
-				gui.ChangeRightView(0);
+				gui.changeRightView(0);
 			}
 		});
 
@@ -228,6 +232,7 @@ public class InfoPanel extends JPanel {
 
 		controlPanel.add(manageTagsButton);
 		controlPanel.add(detailToggleButton);
+
 		return controlPanel;
 	}
 

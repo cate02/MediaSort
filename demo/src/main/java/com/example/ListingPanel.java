@@ -91,19 +91,15 @@ public class ListingPanel extends JPanel {
 				addPanel(p);
 			}
 		}
-		layoutPanels();
 		updateImageScales();
+		layoutPanels();
 	}
 
 	public void addPanel(JPanel panel) {
-		System.out.println("Adding panel to listing for file: " + ((FilePanel) panel).fileItem.name);
 		activeFilePanels.add((FilePanel) panel);
 		panel.setSize(panelWidth, panelHeight);
-		// addSelectionListeners(panel, ((FilePanel) panel).fileItem);
-		// addMouseListenerRecursively(panel, ((FilePanel) panel).fileItem);
 		contentPanel.add(panel);
 		layoutPanels();
-		// updateImageScales();
 	}
 
 	public void removeAllPanels() {
@@ -130,6 +126,8 @@ public class ListingPanel extends JPanel {
 		c.anchor = GridBagConstraints.WEST;
 		autoRefreshCheck.addActionListener(e -> {
 			preferences.putBoolean("autoRefresh", autoRefreshCheck.isSelected());
+			updateImageScales();
+			layoutPanels();
 		});
 		panel.add(autoRefreshCheck, c);
 
@@ -224,13 +222,14 @@ public class ListingPanel extends JPanel {
 		c.insets = new java.awt.Insets(5, 10, 5, 10); // top, left, bottom, right
 
 		// checkbox to toggle selecting
-		JCheckBox selectingCheck = new JCheckBox("Selecting", true);
-		selectingCheck.addActionListener(e -> {
-			canSelect = selectingCheck.isSelected();
-		});
-		c.gridx = 0;
-		c.anchor = GridBagConstraints.WEST;
-		panel.add(selectingCheck, c);
+		// JCheckBox selectingCheck = new JCheckBox("Selecting", true);
+		// selectingCheck.addActionListener(e -> {
+		// canSelect = selectingCheck.isSelected();
+		// });
+		canSelect = true;
+		// c.gridx = 0;
+		// c.anchor = GridBagConstraints.WEST;
+		// panel.add(selectingCheck, c);
 
 		// selected count label
 		c.gridx = 1;
@@ -271,6 +270,7 @@ public class ListingPanel extends JPanel {
 
 	}
 
+	// seperate method so resizing window not panels is quick
 	public static void layoutPanels() {
 		int width = scrollPane.getViewport().getWidth();
 		if (width == 0)
