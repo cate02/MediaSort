@@ -237,8 +237,8 @@ public class InfoPanel extends JPanel {
 	}
 
 	public static void updateFileTags() {
-		List<String> sharedTags = new ArrayList<>();
-		sharedTags = DbManager.findSharedTags(ListingPanel.selectedFiles);
+		Map<String, Integer> sharedTagsCounted = new HashMap<>();
+		sharedTagsCounted = DbManager.findTagsWithCount(ListingPanel.selectedFiles);
 		List<String> selectedFilesTags = new ArrayList<>();
 		for (FileItem fileItem : ListingPanel.selectedFiles) {
 			for (String tag : fileItem.tagsList) {
@@ -248,26 +248,39 @@ public class InfoPanel extends JPanel {
 			}
 		}
 		// in selectedfilestags, remove its entries which include a tag from shared tags
-		selectedFilesTags.removeAll(sharedTags);
-		UpdateSelectedHighlight(sharedTags, selectedFilesTags);
+		// selectedFilesTags.removeAll(sharedTags);
+		UpdateSelectedHighlight(sharedTagsCounted);
 
-		fileTagsList.setListData(sharedTags.toArray(new String[0]));
+		fileTagsList.setListData(sharedTagsCounted.keySet().toArray(new String[0]));
 	}
 
-	private static void UpdateSelectedHighlight(List<String> sharedTags, List<String> selectedFilesTags) {
+	private static void UpdateSelectedHighlight(Map<String, Integer> sharedTagsCounted) {
+		System.out.println(sharedTagsCounted.toString());
 		for (FilePanel filePanel : listingPanel.activeFilePanels) {
 			HashMap<String, TagMatchState> highlightMap = new HashMap<>();
 			List<String> fileTags = filePanel.fileItem.tagsList;
-			for (String tag : sharedTags) {
-				if (fileTags.contains(tag)) {
-					highlightMap.put(tag, TagMatchState.Full);
+			for (String tag : fileTags) {
+				if (sharedTagsCounted.containsKey(tag)) {
+					if (sharedTagsCounted.get(tag) == ListingPanel.selectedFiles.size()) {
+						highlightMap.put(tag, TagMatchState.Full);
+					} else {
+						// if shared>1 partial
+						if (sharedTagsCounted.get(tag) > 1) {
+							highlightMap.put(tag, TagMatchState.Partial);
+						} else {
+							// if fileitems selected
+							if (filePanel.fileItem.isSelected)
+								highlightMap.put(tag, TagMatchState.Unique);
+							else {
+								highlightMap.put(tag, TagMatchState.Relative);
+							}
+						}
+					}
+				} else {
+					highlightMap.put(tag, TagMatchState.None);
 				}
 			}
-			for (String tag : selectedFilesTags) {
-				if (fileTags.contains(tag)) {
-					highlightMap.put(tag, TagMatchState.Partial);
-				}
-			}
+
 			filePanel.setHighlight(highlightMap);
 		}
 		appliedTagsList.repaint();

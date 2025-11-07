@@ -69,17 +69,19 @@ public final class GUI {
 		manageTagsPanel.setMinimumSize(new Dimension(100, 100));
 		frame.setMinimumSize(new Dimension(400, 250));
 
-		leftMiddleSplit = new JSplitPane(setupSplitPane());
+		leftMiddleSplit = setupSplitPane();
 		middleRightSplit = setupSplitPane();
+		middleRightSplit.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, InfoPanel.gray));
 
 		leftMiddleSplit.setLeftComponent(infoPanel);
+		infoPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 5, InfoPanel.gray));
 		leftMiddleSplit.setRightComponent(listingPanel);
 
 		middleRightSplit.setLeftComponent(leftMiddleSplit);
 		middleRightSplit.setRightComponent(manageTagsPanel);
+		manageTagsPanel.setBorder(BorderFactory.createMatteBorder(0, 5, 0, 0, InfoPanel.gray));
 
 		frame.add(middleRightSplit, BorderLayout.CENTER);
-		frame.add(leftMiddleSplit, BorderLayout.CENTER);
 
 		int dividerLocation = preferences.getInt("splitPaneDividerLocation", frameWidth / 4);
 		leftMiddleSplit.setDividerLocation(dividerLocation);
@@ -123,10 +125,6 @@ public final class GUI {
 		splitPane.setContinuousLayout(true);
 		splitPane.setOneTouchExpandable(true);
 		attachUserDragListener(splitPane);
-		// leftMiddleSplit.setBorder(null);
-		leftMiddleSplit.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, InfoPanel.gray));
-		// ui.getDivider().setBorder(BorderFactory.createMatteBorder(0, 5, 0, 0,
-		// InfoPanel.gray));
 
 		return splitPane;
 	}

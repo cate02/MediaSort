@@ -38,7 +38,7 @@ import javax.swing.UIManager;
 // import org.w3c.dom.events.MouseEvent; // Removed incorrect import
 
 enum TagMatchState {
-	Full, Partial, None
+	Full, Partial, None, Unique, Relative
 }
 
 public class FilePanel extends JPanel {
@@ -417,7 +417,12 @@ public class FilePanel extends JPanel {
 				} else if (state == TagMatchState.Partial) {
 					// lighter purple
 					c.setBackground(new Color(255, 204, 255)); // light purple
-
+				} else if (state == TagMatchState.Unique) {
+					// light red but daker
+					c.setBackground(new Color(255, 153, 153)); // light red
+				} else if (state == TagMatchState.Relative) {
+					// light orange
+					c.setBackground(new Color(255, 229, 204)); // light orange
 				} else if (!isSelected) {
 					c.setBackground(Color.WHITE); // reset
 				}

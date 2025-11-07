@@ -400,6 +400,34 @@ public class DbManager {
 		return tags;
 	}
 
+	// return list filetitems plus int count, like a hashmap
+	public static Map<String, Integer> findTagsWithCount(List<FileItem> files) {
+		Map<String, Integer> tagsMap = new LinkedHashMap<>();
+		// find all unique tags for list of files
+		try {
+			StringBuilder query = new StringBuilder(
+					"SELECT t.tag, COUNT(*) as count FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id INNER JOIN files f ON ft.file_id = f.id WHERE f.id IN (");
+			for (int i = 0; i < files.size(); i++) {
+				query.append("?");
+				if (i < files.size() - 1) {
+					query.append(", ");
+				}
+			}
+			query.append(") GROUP BY t.tag;");
+			PreparedStatement stmt = conn.prepareStatement(query.toString());
+			for (int i = 0; i < files.size(); i++) {
+				stmt.setInt(i + 1, files.get(i).id);
+			}
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				tagsMap.put(rs.getString("tag"), rs.getInt("count"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tagsMap;
+	}
+
 	public static List<String> findSharedTags(List<FileItem> files) {
 
 		List<String> tags = new ArrayList<>();
